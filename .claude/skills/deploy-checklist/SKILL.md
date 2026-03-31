@@ -1,7 +1,7 @@
 ---
 name: deploy-checklist
 description: Verify a PR is ready, merge it, deploy frontend to Vercel and database to Supabase, and confirm health. Use when the Deploy Agent needs to ship code to production.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__github__*, mcp__vercel__*, mcp__supabase__*, mcp__linear__*
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__github__*, mcp__vercel__*, mcp__supabase__*, mcp__atlassian__*
 ---
 
 # Deploy Checklist
@@ -42,7 +42,7 @@ Supabase was already provisioned at pipeline start via the Vercel Marketplace. A
 
 13. Check the health endpoint of the deployed Vercel app (use the deployment URL).
 14. Verify the frontend can reach the Supabase backend (if applicable).
-15. Move the Linear ticket to Done via Linear MCP.
+15. Transition the Jira ticket to Done via Atlassian MCP.
 
 ## Output Format
 
@@ -92,4 +92,4 @@ _ISO 8601 timestamp_
 - **GitHub**: Merge the PR, check CI status.
 - **Vercel**: Link project, trigger deploy, check status, promote to production. Also provision Supabase via Marketplace integration.
 - **Supabase**: Run database migrations, verify schema. Not needed for provisioning (Vercel handles that).
-- **Linear**: Move ticket to Done.
+- **Atlassian**: Transition Jira ticket to Done.

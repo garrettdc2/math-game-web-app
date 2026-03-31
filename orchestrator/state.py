@@ -1,4 +1,4 @@
-"""LangGraph state schema and Linear state mapping."""
+"""LangGraph state schema and Jira state mapping."""
 
 from typing import TypedDict, Annotated
 
@@ -30,7 +30,7 @@ class FactoryState(TypedDict):
     workspace_path: Annotated[str, _last]  # e.g. "/app/workspace/LIN-42"
 
 
-# Linear state name -> graph entry node
+# Jira status name -> graph entry node
 STATE_MAP: dict[str, str] = {
     "In Spec": "pm_agent",
     "In Arch": "architect_agent",

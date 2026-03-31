@@ -1,7 +1,7 @@
 ---
 name: test-writing
 description: Write and run Jest tests for code in an open PR — unit tests, integration tests, edge cases. Use when the Test Agent needs to validate a PR.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__github__*, mcp__linear__*
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__github__*, mcp__atlassian__*
 ---
 
 # Test Writing
@@ -72,4 +72,4 @@ _ISO 8601 timestamp_
 ## MCP Usage
 
 - **GitHub**: Push test files to the PR branch.
-- **Linear**: Post the test results summary (pass/fail counts, coverage) as a comment on the ticket.
+- **Atlassian**: Post the test results summary (pass/fail counts, coverage) as a comment on the Jira ticket.

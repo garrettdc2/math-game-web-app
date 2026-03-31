@@ -22,5 +22,5 @@ async def test_agent(state: FactoryState) -> FactoryState:
 
 async def deploy_agent(state: FactoryState) -> FactoryState:
     return await run_agent(
-        state, "deploy-checklist/SKILL.md", "Deploy Log", next_linear_state="Done"
+        state, "deploy-checklist/SKILL.md", "Deploy Log", next_jira_state="Done"
     )

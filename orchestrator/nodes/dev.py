@@ -10,10 +10,10 @@ from orchestrator.state import FactoryState
 from orchestrator.audit import audit_log
 from orchestrator.memory import append_memory
 from orchestrator.slack import post_slack
-from orchestrator.linear import (
+from orchestrator.jira import (
     get_issue_id,
     comment_on_issue,
-    update_linear_state,
+    update_issue_state,
     update_stage_progress,
 )
 from orchestrator.agent_runner import run_agent
@@ -101,7 +101,7 @@ async def dev_parallel(state: FactoryState) -> FactoryState:
     # Fallback: no subtasks means run a single dev agent
     if not subtasks:
         return await run_agent(
-            state, "coding/SKILL.md", "Implementation", next_linear_state="In QA"
+            state, "coding/SKILL.md", "Implementation", next_jira_state="In QA"
         )
 
     # Create the branch once before spawning parallel agents
@@ -176,7 +176,7 @@ async def dev_parallel(state: FactoryState) -> FactoryState:
         options = ClaudeAgentOptions(
             cwd=workspace_path,
             permission_mode="bypassPermissions",
-            allowed_tools=["Bash", "Read", "Glob", "mcp__github__*", "mcp__linear__*"],
+            allowed_tools=["Bash", "Read", "Glob", "mcp__github__*", "mcp__atlassian__*"],
         )
         pr_prompt = (
             f"You are working on ticket {ticket_id}: {state['title']}\n\n"
@@ -185,7 +185,7 @@ async def dev_parallel(state: FactoryState) -> FactoryState:
             f"2. Open a single PR via GitHub MCP targeting `main` with:\n"
             f"   - Title: `{ticket_id}: {state['title']}`\n"
             f"   - Body summarizing all subtasks that were implemented\n"
-            f"3. Post the PR link as a comment on the Linear ticket\n\n"
+            f"3. Post the PR link as a comment on the Jira ticket\n\n"
             f"Return the PR URL."
         )
         pr_output = []
@@ -199,7 +199,7 @@ async def dev_parallel(state: FactoryState) -> FactoryState:
     except ImportError:
         logger.warning("claude-agent-sdk not available for PR creation")
 
-    await update_linear_state(ticket_id, "In QA")
+    await update_issue_state(ticket_id, "In QA")
     if parent_id:
         await comment_on_issue(
             parent_id,

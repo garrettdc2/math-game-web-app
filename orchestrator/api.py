@@ -12,7 +12,6 @@ from orchestrator.config import DB_PATH, logger
 from orchestrator.state import STATE_MAP
 from orchestrator.audit import audit_log
 from orchestrator.memory import init_memory
-from orchestrator.linear import resolve_state_name
 from orchestrator.graph import build_graph
 from orchestrator import pipeline
 
@@ -34,32 +33,29 @@ async def health():
     return {"status": "ok"}
 
 
-@traceable(run_type="chain", name="webhook_linear")
-@app.post("/webhook/linear")
-async def webhook_linear(request: Request, background_tasks: BackgroundTasks):
-    body = await request.body()
-    payload = json.loads(body)
+@traceable(run_type="chain", name="webhook_jira")
+@app.post("/webhook/jira")
+async def webhook_jira(request: Request, background_tasks: BackgroundTasks):
+    payload = json.loads(await request.body())
 
-    # Only process issue state changes
-    if payload.get("type") != "Issue" or payload.get("action") != "update":
+    if payload.get("webhookEvent") != "jira:issue_updated":
         return {"ok": True, "skipped": True}
 
-    data = payload.get("data", {})
-    state_id = data.get("stateId")
-    if not state_id:
+    # Only process status changes
+    items = payload.get("changelog", {}).get("items", [])
+    status_change = next((i for i in items if i.get("field") == "status"), None)
+    if not status_change:
         return {"ok": True, "skipped": True}
 
-    # Resolve the Linear state name from UUID
-    state_name = await resolve_state_name(state_id)
+    state_name = status_change.get("toString")
     if not state_name or state_name not in STATE_MAP:
         return {"ok": True, "skipped": True, "state": state_name}
 
-    # Extract ticket info
-    ticket_number = data.get("number")
-    ticket_id = f"LIN-{ticket_number}"
-    title = data.get("title", "Untitled")
+    issue = payload.get("issue", {})
+    ticket_id = issue.get("key")          # Already "PROJ-123"
+    title = issue.get("fields", {}).get("summary", "Untitled")
 
-    audit_log(ticket_id, "webhook_received", f"{state_name} (stateId={state_id})")
+    audit_log(ticket_id, "webhook_received", state_name)
 
     # Initialize memory file if this is a new ticket
     init_memory(ticket_id, title)

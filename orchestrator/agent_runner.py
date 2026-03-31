@@ -6,8 +6,8 @@ from orchestrator.config import SKILLS_DIR, MEMORY_DIR, logger
 from orchestrator.state import FactoryState
 from orchestrator.audit import audit_log
 from orchestrator.memory import append_memory
-from orchestrator.linear import (
-    update_linear_state,
+from orchestrator.jira import (
+    update_issue_state,
     complete_stage_sub_issue,
     update_stage_progress,
     get_issue_id,
@@ -16,7 +16,7 @@ from orchestrator.linear import (
 
 
 def _excerpt(text: str, max_lines: int = 30) -> str:
-    """Extract a meaningful excerpt from agent output for Linear comments."""
+    """Extract a meaningful excerpt from agent output for Jira comments."""
     lines = text.strip().splitlines()
     meaningful = [l for l in lines if l.strip() and not l.startswith("[STUB]")]
     if len(meaningful) <= max_lines:
@@ -29,7 +29,7 @@ async def run_agent(
     state: FactoryState,
     skill_file: str,
     memory_section: str,
-    next_linear_state: str | None = None,
+    next_jira_state: str | None = None,
     extra_prompt: str = "",
 ) -> FactoryState:
     """Spawn a Claude Code session for the given skill and append output to memory."""
@@ -78,7 +78,7 @@ async def run_agent(
             permission_mode="bypassPermissions",
             allowed_tools=[
                 "Read", "Write", "Edit", "Bash", "Glob", "Grep",
-                "mcp__linear__*", "mcp__github__*",
+                "mcp__atlassian__*", "mcp__github__*",
                 "mcp__vercel__*", "mcp__supabase__*", "mcp__slack__*",
             ],
         )
@@ -95,8 +95,8 @@ async def run_agent(
 
     append_memory(ticket_id, memory_section, output)
 
-    if next_linear_state:
-        await update_linear_state(ticket_id, next_linear_state)
+    if next_jira_state:
+        await update_issue_state(ticket_id, next_jira_state)
 
     # Post agent output summary to the parent issue
     if issue_info:

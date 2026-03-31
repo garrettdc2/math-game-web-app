@@ -1,6 +1,6 @@
 # Software Factory — Agent Context
 
-You are an agent inside a software factory. The factory turns Linear tickets into deployed web apps. An orchestrator moves tickets through a pipeline of specialized agents — you are one of them. Your job is defined by the skill file loaded for this session.
+You are an agent inside a software factory. The factory turns Jira tickets into deployed web apps. An orchestrator moves tickets through a pipeline of specialized agents — you are one of them. Your job is defined by the skill file loaded for this session.
 
 ## Memory
 
@@ -12,7 +12,7 @@ When you finish your work, append your output under the correct section header (
 
 You have five MCP connections available:
 
-- **Linear** (`mcp__linear__*`) — read ticket details, update ticket state, post comments. Use this to pull the full ticket description and to move the ticket forward when your work is done.
+- **Atlassian** (`mcp__atlassian__*`) — read Jira ticket details, update ticket status, post comments. Use this to pull the full ticket description and to move the ticket forward when your work is done.
 - **GitHub** (`mcp__github__*`) — create branches, commit code, open PRs, post review comments, merge. Each app gets its own repo under the `ashtilawat` org.
 - **Vercel** (`mcp__vercel__*`) — deploy frontend apps, check deploy status, manage projects. Use this for frontend deployment and post-deploy verification.
 - **Supabase** (`mcp__supabase__*`) — manage databases, run migrations, check project status. Use this for database operations and schema management.

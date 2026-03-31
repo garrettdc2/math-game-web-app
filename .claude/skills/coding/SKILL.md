@@ -1,7 +1,7 @@
 ---
 name: coding
 description: Implement an architecture decision by writing code in the app repo, committing to a branch, and opening a PR. Use when the Dev Agent needs to write and ship code.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__github__*, mcp__linear__*
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__github__*, mcp__atlassian__*
 ---
 
 # Coding
@@ -26,7 +26,7 @@ You are the Dev Agent. Your job is to implement the architecture decision by wri
 
 ### Full mode (no subtask scope — legacy behavior)
 
-1. Create a new git branch named `{ticket-id}/implementation` (e.g. `LIN-42/implementation`).
+1. Create a new git branch named `{ticket-id}/implementation` (e.g. `PROJ-42/implementation`).
 2. Implement the architecture decision exactly as specified — follow the file list.
 3. Follow the conventions below for all code.
 4. Commit your changes with a clear message referencing the ticket ID.
@@ -94,4 +94,4 @@ _ISO 8601 timestamp_
 ## MCP Usage
 
 - **GitHub**: Create branch, commit, push, open PR.
-- **Linear**: Post a comment with the PR link.
+- **Atlassian**: Post a comment with the PR link on the Jira ticket.

@@ -1,10 +1,12 @@
 {
   "mcpServers": {
-    "linear": {
+    "atlassian": {
       "command": "npx",
-      "args": ["-y", "linear-mcp-server"],
+      "args": ["-y", "@modelcontextprotocol/server-atlassian"],
       "env": {
-        "LINEAR_API_KEY": "${LINEAR_API_KEY}"
+        "ATLASSIAN_API_TOKEN": "${JIRA_API_TOKEN}",
+        "ATLASSIAN_EMAIL": "${JIRA_EMAIL}",
+        "ATLASSIAN_DOMAIN": "${JIRA_DOMAIN}"
       }
     },
     "github": {
