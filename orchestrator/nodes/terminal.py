@@ -4,14 +4,14 @@ from orchestrator.config import MEMORY_DIR
 from orchestrator.state import FactoryState
 from orchestrator.audit import audit_log
 from orchestrator.slack import post_slack
-from orchestrator.linear import update_linear_state, get_issue_id, comment_on_issue
+from orchestrator.jira import update_issue_state, get_issue_id, comment_on_issue
 
 
 async def done_handler(state: FactoryState) -> FactoryState:
     ticket_id = state["ticket_id"]
     repo_name = state.get("repo_name", "")
 
-    # Post final summary to Linear
+    # Post final summary to Jira
     issue_info = await get_issue_id(ticket_id)
     if issue_info:
         # Read the deploy log from memory for the deploy URL
@@ -45,9 +45,9 @@ async def blocked_handler(state: FactoryState) -> FactoryState:
     ticket_id = state["ticket_id"]
     error = state.get("error", "unknown")
 
-    await update_linear_state(ticket_id, "Blocked")
+    await update_issue_state(ticket_id, "Blocked")
 
-    # Post error details to Linear
+    # Post error details to Jira
     issue_info = await get_issue_id(ticket_id)
     if issue_info:
         await comment_on_issue(

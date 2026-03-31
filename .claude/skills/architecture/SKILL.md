@@ -1,7 +1,7 @@
 ---
 name: architecture
 description: Produce a technical architecture decision from a spec — approach, alternatives, constraints, files affected, and dependencies. Use when the Architect Agent needs to plan implementation.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__github__*, mcp__linear__*
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__github__*, mcp__atlassian__*
 ---
 
 # Architecture
@@ -71,4 +71,4 @@ Break the implementation into independently implementable subtasks. Each subtask
 ## MCP Usage
 
 - **GitHub**: Check existing code structure in the repo if needed.
-- **Linear**: Post the architecture decision summary as a comment on the ticket.
+- **Atlassian**: Post the architecture decision summary as a comment on the Jira ticket.

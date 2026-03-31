@@ -1,4 +1,4 @@
-"""Human approval gates — pause the pipeline and wait for Linear state change."""
+"""Human approval gates — pause the pipeline and wait for Jira status change."""
 
 from langsmith import traceable
 from langgraph.types import interrupt
@@ -7,14 +7,14 @@ from orchestrator.state import FactoryState
 from orchestrator.audit import audit_log
 from orchestrator.memory import append_memory
 from orchestrator.slack import post_slack
-from orchestrator.linear import get_issue_id, comment_on_issue
+from orchestrator.jira import get_issue_id, comment_on_issue
 
 
 @traceable(run_type="chain", name="gate")
 async def gate(state: FactoryState, gate_name: str, next_state_hint: str) -> FactoryState:
     ticket_id = state["ticket_id"]
 
-    # Post gate reached to Linear
+    # Post gate reached to Jira
     issue_info = await get_issue_id(ticket_id)
     if issue_info:
         await comment_on_issue(
@@ -47,7 +47,7 @@ async def gate(state: FactoryState, gate_name: str, next_state_hint: str) -> Fac
         audit_log(ticket_id, "blocked", gate_name)
         return {**state, "current_state": "Blocked", "error": error_msg}
 
-    # Post approval to Linear
+    # Post approval to Jira
     if issue_info:
         await comment_on_issue(
             issue_info["id"],

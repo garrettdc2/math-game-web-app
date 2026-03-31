@@ -11,8 +11,8 @@ from orchestrator.state import FactoryState
 from orchestrator.audit import audit_log
 from orchestrator.memory import append_memory
 from orchestrator.slack import post_slack
-from orchestrator.linear import (
-    update_linear_state,
+from orchestrator.jira import (
+    update_issue_state,
     ensure_stage_sub_issues,
     get_issue_id,
     comment_on_issue,
@@ -86,7 +86,7 @@ async def create_app_infra(ticket_id: str, title: str) -> tuple[str, str]:
         logger.warning("claude-agent-sdk not available, stubbing infra creation")
         workspace.mkdir(parents=True, exist_ok=True)
 
-    # Post infra creation to Linear
+    # Post infra creation to Jira
     issue_info = await get_issue_id(ticket_id)
     if issue_info:
         await comment_on_issue(
@@ -105,7 +105,7 @@ async def handle_timeout(ticket_id: str) -> None:
     minutes = AGENT_TIMEOUT // 60
     error_msg = f"Agent timed out after {minutes} minutes"
     append_memory(ticket_id, "Error", error_msg)
-    await update_linear_state(ticket_id, "Blocked")
+    await update_issue_state(ticket_id, "Blocked")
 
     issue_info = await get_issue_id(ticket_id)
     if issue_info:
@@ -124,7 +124,7 @@ async def handle_timeout(ticket_id: str) -> None:
 
 async def handle_error(ticket_id: str, error: str) -> None:
     append_memory(ticket_id, "Error", f"Pipeline error: {error}")
-    await update_linear_state(ticket_id, "Blocked")
+    await update_issue_state(ticket_id, "Blocked")
 
     issue_info = await get_issue_id(ticket_id)
     if issue_info:

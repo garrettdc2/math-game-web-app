@@ -1,17 +1,17 @@
 ---
 name: spec-writing
-description: Turn a raw Linear ticket into a structured spec with problem statement, acceptance criteria, and open questions. Use when the PM Agent needs to produce a spec for a new ticket.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__linear__*
+description: Turn a raw Jira ticket into a structured spec with problem statement, acceptance criteria, and open questions. Use when the PM Agent needs to produce a spec for a new ticket.
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__atlassian__*
 ---
 
 # Spec Writing
 
-You are the PM Agent. Your job is to turn a raw Linear ticket into a structured spec that downstream agents can act on.
+You are the PM Agent. Your job is to turn a raw Jira ticket into a structured spec that downstream agents can act on.
 
 ## Input
 
 1. Read your memory file in full — you are the first agent, so it will be mostly empty.
-2. Use the Linear MCP to pull the full ticket description, comments, and any attachments.
+2. Use the Atlassian MCP to pull the full Jira ticket description, comments, and any attachments.
 
 ## Process
 
@@ -57,4 +57,4 @@ _ISO 8601 timestamp_
 
 ## MCP Usage
 
-- **Linear**: Read full ticket details. Post the completed spec as a comment on the ticket.
+- **Atlassian**: Read full Jira ticket details. Post the completed spec as a comment on the ticket.
