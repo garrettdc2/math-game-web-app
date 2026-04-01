@@ -42,7 +42,7 @@ interface UseCelebrationReturn {
 // Milestone helpers
 // ---------------------------------------------------------------------------
 
-const MILESTONE_EVENTS: Set<CelebrationEventType> = new Set([
+const MILESTONE_EVENTS = new Set<CelebrationEventType>([
   'streak_5',
   'streak_10',
   'streak_15',
