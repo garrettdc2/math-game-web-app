@@ -80,51 +80,27 @@ export default function MilestoneOverlay({
         <span className="absolute -inset-2 rounded-3xl border-2 border-white/30 animate-ping-slow" />
       </div>
 
-      {/* Inline keyframes — rendered once, deduped by the browser. */}
-      <style jsx>{`
-        @keyframes milestone-enter {
-          0% {
-            opacity: 0;
-            transform: scale(0.5) translateY(30px);
-          }
-          60% {
-            opacity: 1;
-            transform: scale(1.08) translateY(-5px);
-          }
-          100% {
-            transform: scale(1) translateY(0);
-          }
+      {/* Inline keyframes — rendered once, deduped by the browser. Uses a
+          standard <style> tag (no styled-jsx dependency) with prefixed class
+          names to avoid collisions. */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes mq-milestone-enter {
+          0% { opacity: 0; transform: scale(0.5) translateY(30px); }
+          60% { opacity: 1; transform: scale(1.08) translateY(-5px); }
+          100% { transform: scale(1) translateY(0); }
         }
-        @keyframes milestone-exit {
-          0% {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-          100% {
-            opacity: 0;
-            transform: scale(0.8) translateY(-40px);
-          }
+        @keyframes mq-milestone-exit {
+          0% { opacity: 1; transform: scale(1) translateY(0); }
+          100% { opacity: 0; transform: scale(0.8) translateY(-40px); }
         }
-        @keyframes ping-slow {
-          0% {
-            opacity: 0.6;
-            transform: scale(1);
-          }
-          100% {
-            opacity: 0;
-            transform: scale(1.15);
-          }
+        @keyframes mq-ping-slow {
+          0% { opacity: 0.6; transform: scale(1); }
+          100% { opacity: 0; transform: scale(1.15); }
         }
-        .animate-milestone-enter {
-          animation: milestone-enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-        .animate-milestone-exit {
-          animation: milestone-exit 0.5s ease-in forwards;
-        }
-        .animate-ping-slow {
-          animation: ping-slow 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-      `}</style>
+        .animate-milestone-enter { animation: mq-milestone-enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .animate-milestone-exit { animation: mq-milestone-exit 0.5s ease-in forwards; }
+        .animate-ping-slow { animation: mq-ping-slow 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; }
+      `}} />
     </div>
   );
 }

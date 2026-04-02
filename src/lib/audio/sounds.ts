@@ -24,15 +24,15 @@ interface SoundDef {
 
 const SOUND_DEFS: Record<SoundName, SoundDef> = {
   correct: {
-    src: ['/sounds/correct.mp3'],
+    src: ['/sounds/correct.wav', '/sounds/correct.mp3'],
     volume: 0.6,
   },
   incorrect: {
-    src: ['/sounds/incorrect.mp3'],
+    src: ['/sounds/incorrect.wav', '/sounds/incorrect.mp3'],
     volume: 0.4,
   },
   milestone: {
-    src: ['/sounds/milestone.mp3'],
+    src: ['/sounds/milestone.wav', '/sounds/milestone.mp3'],
     volume: 0.8,
   },
 };

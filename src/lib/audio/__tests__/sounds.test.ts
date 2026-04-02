@@ -89,7 +89,7 @@ describe('sounds', () => {
       playSound('correct');
       expect(Howl).toHaveBeenCalledWith(
         expect.objectContaining({
-          src: ['/sounds/correct.mp3'],
+          src: ['/sounds/correct.wav', '/sounds/correct.mp3'],
           volume: 0.6,
         }),
       );
@@ -97,7 +97,7 @@ describe('sounds', () => {
       playSound('incorrect');
       expect(Howl).toHaveBeenCalledWith(
         expect.objectContaining({
-          src: ['/sounds/incorrect.mp3'],
+          src: ['/sounds/incorrect.wav', '/sounds/incorrect.mp3'],
           volume: 0.4,
         }),
       );
@@ -105,7 +105,7 @@ describe('sounds', () => {
       playSound('milestone');
       expect(Howl).toHaveBeenCalledWith(
         expect.objectContaining({
-          src: ['/sounds/milestone.mp3'],
+          src: ['/sounds/milestone.wav', '/sounds/milestone.mp3'],
           volume: 0.8,
         }),
       );
