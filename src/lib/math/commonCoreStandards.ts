@@ -13,7 +13,7 @@
  *   - 9-12: Algebra, Functions, Geometry, Statistics (high-school standards)
  */
 
-import type { GradeConfig } from './types';
+import type { Grade, GradeConfig } from './types';
 
 // ---------------------------------------------------------------------------
 // Kindergarten
@@ -576,7 +576,7 @@ const grade12: GradeConfig = {
 // ---------------------------------------------------------------------------
 
 /** Map from grade to its configuration. */
-export const GRADE_CONFIGS: Record<string, GradeConfig> = {
+export const GRADE_CONFIGS: Record<Grade, GradeConfig> = {
   K: gradeK,
   '1': grade1,
   '2': grade2,

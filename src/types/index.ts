@@ -1,35 +1,31 @@
-/** Grade levels K through 12 */
-export type Grade =
-  | "K"
-  | "1"
-  | "2"
-  | "3"
-  | "4"
-  | "5"
-  | "6"
-  | "7"
-  | "8"
-  | "9"
-  | "10"
-  | "11"
-  | "12";
+/**
+ * Shared type definitions for the math-game-web-app.
+ *
+ * IMPORTANT: Math engine types (Grade, Operation, DisplayToken, Problem,
+ * GradeConfig, NumberRange, ProblemTypeConfig) are the single source of truth
+ * from `@/lib/math/types`. Re-exported here for convenience so consumers can
+ * import everything from `@/types`.
+ */
 
-/** All available grade levels */
-export const GRADES: Grade[] = [
-  "K",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "10",
-  "11",
-  "12",
-];
+// Re-export math engine types as the single source of truth
+export type {
+  Grade,
+  Operation,
+  DisplayToken,
+  Problem,
+  GradeConfig,
+  NumberRange,
+  ProblemTypeConfig,
+} from "@/lib/math/types";
+
+export { ALL_GRADES } from "@/lib/math/types";
+
+/** Alias for backwards compatibility — prefer ALL_GRADES */
+export { ALL_GRADES as GRADES } from "@/lib/math/types";
+
+// ---- App-specific types (not in math engine) ----
+
+import type { Grade } from "@/lib/math/types";
 
 /** User profile extending Supabase auth user */
 export interface Profile {
@@ -67,53 +63,10 @@ export interface LeaderboardEntry {
   rank: number;
 }
 
-/** Math operations supported by the problem engine */
-export type Operation =
-  | "addition"
-  | "subtraction"
-  | "multiplication"
-  | "division"
-  | "counting"
-  | "fractions"
-  | "decimals"
-  | "ratios"
-  | "algebra"
-  | "geometry";
-
-/** A display token for rendering math problems (3D or 2D) */
-export interface DisplayToken {
-  type: "number" | "symbol" | "variable" | "fraction";
-  value: string;
-  /** Position hint for 3D layout */
-  position?: { x: number; y: number; z: number };
-}
-
-/** A generated math problem */
-export interface Problem {
-  id: string;
-  question: string;
-  correctAnswer: string;
-  operands: number[];
-  operation: Operation;
-  displayTokens: DisplayToken[];
-  difficulty: number;
-}
-
-/** Configuration for problem generation per grade */
-export interface GradeConfig {
-  grade: Grade;
-  label: string;
-  operations: Operation[];
-  numberRange: { min: number; max: number };
-  allowNegatives: boolean;
-  allowDecimals: boolean;
-  problemTypes: string[];
-}
-
 /** Game session state */
 export interface GameSession {
   grade: Grade;
-  currentProblem: Problem | null;
+  currentProblem: import("@/lib/math/types").Problem | null;
   score: number;
   streak: number;
   bestStreak: number;

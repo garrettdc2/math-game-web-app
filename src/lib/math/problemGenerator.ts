@@ -259,6 +259,43 @@ function buildFractions(config: ProblemTypeConfig, grade: Grade): Problem {
     };
   }
 
+  // For grade 5: addition/subtraction with unlike denominators
+  if (grade === '5' && !config.label.includes('multiplication')) {
+    const denom2 = Math.max(2, randInt(2, 12));
+    const num2 = randInt(1, denom2 - 1);
+    // Find common denominator
+    const commonDenom = (denom * denom2) / gcd(denom, denom2);
+    const adjNum1 = num1 * (commonDenom / denom);
+    const adjNum2 = num2 * (commonDenom / denom2);
+    const isAdd = Math.random() < 0.5;
+    // For subtraction, ensure non-negative result
+    const [nA, nB] = isAdd ? [adjNum1, adjNum2] : (adjNum1 >= adjNum2 ? [adjNum1, adjNum2] : [adjNum2, adjNum1]);
+    const [dispNum1, dispDenom1, dispNum2, dispDenom2] = isAdd
+      ? [num1, denom, num2, denom2]
+      : (adjNum1 >= adjNum2 ? [num1, denom, num2, denom2] : [num2, denom2, num1, denom]);
+    const ansNum = isAdd ? nA + nB : nA - nB;
+    const ansG = gcd(Math.abs(ansNum), commonDenom);
+    const answer = round(ansNum / commonDenom);
+    const op = isAdd ? '+' : '−';
+    return {
+      id: generateId(),
+      grade,
+      operation: 'fractions',
+      question: `${dispNum1}/${dispDenom1} ${op} ${dispNum2}/${dispDenom2} = ?`,
+      correctAnswer: answer,
+      tolerance: 0.001,
+      operands: [dispNum1, dispDenom1, dispNum2, dispDenom2],
+      displayTokens: [
+        fractionToken(dispNum1, dispDenom1),
+        symToken(op),
+        fractionToken(dispNum2, dispDenom2),
+        symToken('='),
+        symToken('?'),
+      ],
+      hint: `Find a common denominator: ${commonDenom}. Convert: ${nA}/${commonDenom} ${op} ${nB}/${commonDenom} = ${ansNum}/${commonDenom}${ansG > 1 ? ` = ${ansNum / ansG}/${commonDenom / ansG}` : ''}.`,
+    };
+  }
+
   // For grade 6+: division of fractions (invert and multiply)
   const num2 = randInt(1, 8);
   const denom2 = Math.max(2, randInt(2, 10));
@@ -744,12 +781,15 @@ function buildGeometryAngles(config: ProblemTypeConfig, grade: Grade): Problem {
 
   if (grade === '10') {
     // Triangle angle sum: given two angles, find the third
-    const a = randomFromRange(config.operandRanges[0]);
-    const b = randomFromRange(config.operandRanges[1]);
-    const sum = a + b;
-    const clamped = sum >= 180 ? 100 : sum; // ensure valid triangle
+    let a = randomFromRange(config.operandRanges[0]);
+    let b = randomFromRange(config.operandRanges[1]);
+    // Ensure valid triangle: both angles and their sum must be < 180
+    if (a + b >= 180) {
+      a = Math.min(a, 120);
+      b = Math.min(b, 179 - a);
+    }
     const aAdj = a;
-    const bAdj = Math.min(b, 179 - a);
+    const bAdj = b;
     const answer = 180 - aAdj - bAdj;
     return {
       id: generateId(),
