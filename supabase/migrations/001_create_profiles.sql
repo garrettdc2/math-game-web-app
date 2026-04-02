@@ -2,7 +2,7 @@
 create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
   display_name text not null default '',
-  selected_grade text,
+  selected_grade text check (selected_grade is null or selected_grade in ('K','1','2','3','4','5','6','7','8','9','10','11','12')),
   avatar_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

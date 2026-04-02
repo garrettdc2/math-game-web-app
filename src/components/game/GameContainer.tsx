@@ -12,6 +12,15 @@ import CelebrationManager from '@/components/celebrations/CelebrationManager';
 import GradeSelector, { type GradeLevel } from '@/components/shared/GradeSelector';
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Human-readable label for an operation type. */
+function formatOperation(operation: string): string {
+  return operation.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -93,6 +102,9 @@ export default function GameContainer() {
             {game.isSaving && (
               <p className="mt-3 text-sm text-gray-500">Saving score...</p>
             )}
+            {game.saveError && (
+              <p className="mt-3 text-sm text-red-400">{game.saveError}</p>
+            )}
           </div>
         )}
 
@@ -131,11 +143,11 @@ export default function GameContainer() {
       {/* Problem Display */}
       {game.currentProblem ? (
         <>
-          {/* Question text for accessibility / context */}
+          {/* Question context: operation type and grade */}
           <div className="text-center">
             <span className="inline-block rounded-lg bg-white/5 px-4 py-1.5 text-sm text-gray-400">
-              {(game.currentProblem.topic ?? 'math').replace(/_/g, ' ')} — Difficulty{' '}
-              {game.currentProblem.difficulty ?? 1}/5
+              {formatOperation(game.currentProblem.operation)}
+              {game.grade ? ` — Grade ${game.grade}` : ''}
             </span>
           </div>
 

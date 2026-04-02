@@ -2,11 +2,11 @@
 create table public.scores (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references public.profiles(id) on delete cascade not null,
-  grade text not null,
-  score integer not null default 0,
-  streak integer not null default 0,
-  problems_correct integer not null default 0,
-  problems_total integer not null default 0,
+  grade text not null check (grade in ('K','1','2','3','4','5','6','7','8','9','10','11','12')),
+  score integer not null default 0 check (score >= 0 and score <= 100000),
+  streak integer not null default 0 check (streak >= 0),
+  problems_correct integer not null default 0 check (problems_correct >= 0),
+  problems_total integer not null default 0 check (problems_total >= 0 and problems_total >= problems_correct),
   created_at timestamptz not null default now()
 );
 
@@ -49,3 +49,7 @@ select
 from public.scores s
 join public.profiles p on p.id = s.user_id
 group by s.user_id, s.grade, p.display_name, p.avatar_url;
+
+-- Grant access to leaderboard view only for authenticated users
+grant select on public.leaderboard to authenticated;
+revoke all on public.leaderboard from anon;

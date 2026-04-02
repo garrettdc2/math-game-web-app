@@ -85,13 +85,6 @@ export interface Database {
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
-          {
-            foreignKeyName: "scores_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "leaderboard";
-            referencedColumns: ["user_id"];
-          },
         ];
       };
     };

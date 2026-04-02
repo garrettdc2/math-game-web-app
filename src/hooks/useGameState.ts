@@ -1,30 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { generateProblem } from '@/lib/math/problemGenerator';
+import type { Grade, Problem } from '@/lib/math/types';
+import { generateProblem, checkAnswer } from '@/lib/math/problemGenerator';
 import { createClient } from '@/lib/supabase/client';
+import type { Database } from '@/types/database';
 import { useAuth } from '@/hooks/useAuth';
 import {
   useCelebration,
   type CelebrationState,
   type CelebrationEventType,
 } from '@/hooks/useCelebration';
-
-// ---------------------------------------------------------------------------
-// Problem type — compatible with both lib/math/types and types/index
-// ---------------------------------------------------------------------------
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type GameProblem = Record<string, any> & {
-  id: string;
-  question: string;
-  correctAnswer: number | string;
-  operands: number[];
-  displayTokens: any[];
-  difficulty?: number;
-  gradeLevel?: string;
-  topic?: string;
-};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,9 +20,9 @@ export type FeedbackKind = 'correct' | 'incorrect' | null;
 
 export interface GameState {
   /** The current math problem being displayed. */
-  currentProblem: GameProblem | null;
+  currentProblem: Problem | null;
   /** The selected grade level for this session. */
-  grade: string;
+  grade: Grade | null;
   /** Cumulative score for this session. */
   score: number;
   /** Current consecutive-correct streak. */
@@ -59,6 +45,8 @@ export interface GameState {
   elapsedSeconds: number;
   /** Whether a score is currently being saved to the database. */
   isSaving: boolean;
+  /** Error message when score saving fails, or null. */
+  saveError: string | null;
 }
 
 export interface UseGameStateReturn extends GameState {
@@ -79,14 +67,24 @@ export interface UseGameStateReturn extends GameState {
 // ---------------------------------------------------------------------------
 
 /** Points awarded per correct answer. Bonus points scale with streak. */
-function pointsForCorrect(streak: number, difficulty: number): number {
-  const base = 10 * difficulty;
+function pointsForCorrect(streak: number): number {
+  const base = 10;
   const streakBonus = Math.floor(streak / 3) * 5;
   return base + streakBonus;
 }
 
 /** How long (ms) to show correct/incorrect feedback before auto-advancing. */
 const FEEDBACK_DURATION_MS = 1500;
+
+/** All valid grade strings for runtime validation. */
+const VALID_GRADES = new Set<string>([
+  'K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12',
+]);
+
+/** Validate and cast a string to the Grade type. Returns null if invalid. */
+function toGrade(value: string): Grade | null {
+  return VALID_GRADES.has(value) ? (value as Grade) : null;
+}
 
 // ---------------------------------------------------------------------------
 // Hook
@@ -96,8 +94,8 @@ export function useGameState(): UseGameStateReturn {
   const { user } = useAuth();
   const { state: celebration, trigger: triggerCelebration, dismiss: dismissCelebration } = useCelebration();
 
-  const [grade, setGrade] = useState<string>('');
-  const [currentProblem, setCurrentProblem] = useState<GameProblem | null>(null);
+  const [grade, setGrade] = useState<Grade | null>(null);
+  const [currentProblem, setCurrentProblem] = useState<Problem | null>(null);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
@@ -108,6 +106,7 @@ export function useGameState(): UseGameStateReturn {
   const [showingFeedback, setShowingFeedback] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -156,8 +155,11 @@ export function useGameState(): UseGameStateReturn {
 
   const startSession = useCallback(
     (selectedGrade: string) => {
+      const validGrade = toGrade(selectedGrade);
+      if (!validGrade) return;
+
       // Reset all state
-      setGrade(selectedGrade);
+      setGrade(validGrade);
       setScore(0);
       setStreak(0);
       setBestStreak(0);
@@ -167,10 +169,11 @@ export function useGameState(): UseGameStateReturn {
       setShowingFeedback(false);
       setElapsedSeconds(0);
       setIsActive(true);
+      setSaveError(null);
 
       // Generate the first problem
       try {
-        const problem = generateProblem(selectedGrade as never) as unknown as GameProblem;
+        const problem = generateProblem(validGrade);
         setCurrentProblem(problem);
       } catch {
         // Graceful fallback if grade config is missing
@@ -190,7 +193,7 @@ export function useGameState(): UseGameStateReturn {
     setShowingFeedback(false);
 
     try {
-      const problem = generateProblem(grade as never) as unknown as GameProblem;
+      const problem = generateProblem(grade);
       setCurrentProblem(problem);
     } catch {
       setCurrentProblem(null);
@@ -208,28 +211,12 @@ export function useGameState(): UseGameStateReturn {
       const trimmed = answer.trim();
       if (!trimmed) return;
 
-      // Evaluate correctness: compare as numbers if possible, else strings
-      const correctAnswer = currentProblem.correctAnswer;
-      let isCorrect = false;
-
-      if (typeof correctAnswer === 'number') {
-        const parsed = parseFloat(trimmed);
-        if (!isNaN(parsed)) {
-          // Allow small floating-point tolerance
-          isCorrect = Math.abs(parsed - correctAnswer) < 0.01;
-        }
-      } else {
-        // String comparison (case-insensitive, trimmed)
-        const expected = String(correctAnswer).trim().toLowerCase();
-        isCorrect = trimmed.toLowerCase() === expected;
-
-        // Also try numeric comparison for string answers that are numbers
-        const parsedExpected = parseFloat(expected);
-        const parsedAnswer = parseFloat(trimmed);
-        if (!isNaN(parsedExpected) && !isNaN(parsedAnswer)) {
-          isCorrect = isCorrect || Math.abs(parsedAnswer - parsedExpected) < 0.01;
-        }
-      }
+      // Parse user's answer as a number
+      const parsed = parseFloat(trimmed);
+      // Use the problem's own tolerance for comparison (e.g. 0 for integers,
+      // 0.01 for decimals, 0.5 for geometry/trig). Falls back to 0.01 if
+      // tolerance is somehow missing.
+      const isCorrect = !isNaN(parsed) && checkAnswer(currentProblem, parsed);
 
       setProblemsTotal((prev) => prev + 1);
 
@@ -238,7 +225,7 @@ export function useGameState(): UseGameStateReturn {
         setStreak(newStreak);
         setBestStreak((prev) => Math.max(prev, newStreak));
         setProblemsCorrect((prev) => prev + 1);
-        setScore((prev) => prev + pointsForCorrect(newStreak, currentProblem.difficulty ?? 1));
+        setScore((prev) => prev + pointsForCorrect(newStreak));
         setFeedback('correct');
 
         // Trigger celebration events
@@ -273,6 +260,7 @@ export function useGameState(): UseGameStateReturn {
     if (!isActive) return;
 
     setIsActive(false);
+    setSaveError(null);
 
     if (feedbackTimer.current) {
       clearTimeout(feedbackTimer.current);
@@ -280,21 +268,29 @@ export function useGameState(): UseGameStateReturn {
     }
 
     // Persist score if user is authenticated and they answered at least one problem
-    if (user && problemsTotal > 0) {
+    if (user && problemsTotal > 0 && grade) {
       setIsSaving(true);
       try {
         const supabase = createClient();
-        await supabase.from('scores').insert({
+        const row: Database['public']['Tables']['scores']['Insert'] = {
           user_id: user.id,
           grade,
           score,
           streak: bestStreak,
           problems_correct: problemsCorrect,
           problems_total: problemsTotal,
-        });
+        };
+        // NOTE: The Supabase client generic resolution has a known issue with
+        // @supabase/ssr 0.5.x + supabase-js 2.101 that causes Insert to resolve
+        // to `never`. We explicitly type `row` above and cast here to work around.
+        const { error } = await (supabase.from('scores') as unknown as {
+          insert: (values: typeof row) => Promise<{ error: { message: string } | null }>;
+        }).insert(row);
+        if (error) {
+          setSaveError('Failed to save your score. Please try again later.');
+        }
       } catch {
-        // Silently handle — the score can be lost on network errors.
-        // A future enhancement could add offline persistence.
+        setSaveError('Network error — your score could not be saved.');
       } finally {
         setIsSaving(false);
       }
@@ -319,6 +315,7 @@ export function useGameState(): UseGameStateReturn {
     celebration,
     elapsedSeconds,
     isSaving,
+    saveError,
     startSession,
     submitAnswer,
     nextProblem,

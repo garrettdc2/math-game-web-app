@@ -6,9 +6,18 @@ export async function middleware(request: NextRequest) {
     request,
   });
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // Allow the request through without auth checks if Supabase is not configured.
+    // This prevents build-time failures during static generation.
+    return supabaseResponse;
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -72,6 +81,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder files (sounds, images)
      */
-    "/((?!_next/static|_next/image|favicon.ico|sounds/|images/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sounds/|images/|fonts/).*)",
   ],
 };
