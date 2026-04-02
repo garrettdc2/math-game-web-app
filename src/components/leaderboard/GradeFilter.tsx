@@ -1,8 +1,6 @@
 'use client';
 
-import { type Grade } from '@/hooks/useLeaderboard';
-
-const GRADES: Grade[] = ['K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+import { type Grade, GRADES } from '@/types';
 
 interface GradeFilterProps {
   selectedGrade: Grade;

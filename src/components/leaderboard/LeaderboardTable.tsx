@@ -1,6 +1,6 @@
 'use client';
 
-import { type LeaderboardEntry } from '@/hooks/useLeaderboard';
+import { type LeaderboardEntry } from '@/types';
 
 interface LeaderboardTableProps {
   entries: LeaderboardEntry[];

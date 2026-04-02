@@ -2,17 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-
-export type Grade = 'K' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12';
-
-export interface LeaderboardEntry {
-  rank: number;
-  userId: string;
-  displayName: string;
-  avatarUrl: string | null;
-  totalScore: number;
-  gamesPlayed: number;
-}
+import { type Grade, type LeaderboardEntry } from '@/types';
 
 interface UseLeaderboardOptions {
   initialGrade?: Grade;
@@ -44,69 +34,30 @@ export function useLeaderboard(
     try {
       const supabase = createClient();
 
-      // Aggregate scores by user for the selected grade, join with profiles
-      // for display name and avatar. Uses a raw query via rpc or a composed
-      // query depending on what the DB supports.
+      // Query the leaderboard view directly — it already aggregates scores
+      // with rank per grade via the SQL view in 002_create_scores.sql
       const { data, error: queryError } = await supabase
-        .from('scores')
-        .select(`
-          user_id,
-          score,
-          profiles!inner(display_name, avatar_url)
-        `)
+        .from('leaderboard')
+        .select('*')
         .eq('grade', selectedGrade)
-        .order('score', { ascending: false })
-        .limit(limit * 10); // Fetch extra rows for aggregation
+        .order('rank', { ascending: true })
+        .limit(limit);
 
       if (queryError) {
         throw new Error(queryError.message);
       }
 
-      // Aggregate scores per user on the client side
-      const aggregated = new Map<
-        string,
-        {
-          displayName: string;
-          avatarUrl: string | null;
-          totalScore: number;
-          gamesPlayed: number;
-        }
-      >();
-
-      for (const row of data ?? []) {
-        const userId = row.user_id as string;
-        const profile = row.profiles as unknown as {
-          display_name: string;
-          avatar_url: string | null;
-        };
-        const score = row.score as number;
-
-        const existing = aggregated.get(userId);
-        if (existing) {
-          existing.totalScore += score;
-          existing.gamesPlayed += 1;
-        } else {
-          aggregated.set(userId, {
-            displayName: profile.display_name ?? 'Anonymous',
-            avatarUrl: profile.avatar_url ?? null,
-            totalScore: score,
-            gamesPlayed: 1,
-          });
-        }
-      }
-
-      // Sort by total score descending and assign ranks
-      const sorted = Array.from(aggregated.entries())
-        .sort((a, b) => b[1].totalScore - a[1].totalScore)
-        .slice(0, limit);
-
-      const ranked: LeaderboardEntry[] = sorted.map(([userId, info], index) => ({
-        rank: index + 1,
-        userId,
-        displayName: info.displayName,
-        avatarUrl: info.avatarUrl,
-        totalScore: info.totalScore,
-        gamesPlayed: info.gamesPlayed,
+      const ranked: LeaderboardEntry[] = (data ?? []).map((row) => ({
+        userId: row.user_id ?? '',
+        grade: (row.grade ?? selectedGrade) as Grade,
+        displayName: row.display_name ?? 'Anonymous',
+        avatarUrl: row.avatar_url ?? null,
+        totalScore: row.total_score ?? 0,
+        totalCorrect: row.total_correct ?? 0,
+        totalProblems: row.total_problems ?? 0,
+        bestStreak: row.best_streak ?? 0,
+        gamesPlayed: Number(row.games_played ?? 0),
+        rank: Number(row.rank ?? 0),
       }));
 
       setEntries(ranked);

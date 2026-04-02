@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useLeaderboard, type Grade } from '@/hooks/useLeaderboard';
+import { useLeaderboard } from '@/hooks/useLeaderboard';
+import { type Grade } from '@/types';
 import LeaderboardTable from '@/components/leaderboard/LeaderboardTable';
 import GradeFilter from '@/components/leaderboard/GradeFilter';
 import { createClient } from '@/lib/supabase/client';
@@ -27,7 +28,7 @@ export default function LeaderboardPage() {
             .from('profiles')
             .select('selected_grade')
             .eq('id', user.id)
-            .single();
+            .single() as { data: { selected_grade: string | null } | null };
 
           if (profile?.selected_grade) {
             setUserGrade(profile.selected_grade as Grade);

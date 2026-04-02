@@ -2,20 +2,41 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
 
 // ---------------------------------------------------------------------------
-// Mock fixtures
+// Mock fixtures — matches the leaderboard view shape
 // ---------------------------------------------------------------------------
 
-const mockScoresData = [
-  { user_id: 'u1', score: 100, profiles: { display_name: 'Alice', avatar_url: null } },
-  { user_id: 'u1', score: 50, profiles: { display_name: 'Alice', avatar_url: null } },
-  { user_id: 'u2', score: 120, profiles: { display_name: 'Bob', avatar_url: 'https://example.com/bob.png' } },
+const mockLeaderboardData = [
+  {
+    user_id: 'u1',
+    grade: '1',
+    display_name: 'Alice',
+    avatar_url: null,
+    total_score: 150,
+    total_correct: 12,
+    total_problems: 15,
+    best_streak: 5,
+    games_played: 2,
+    rank: 1,
+  },
+  {
+    user_id: 'u2',
+    grade: '1',
+    display_name: 'Bob',
+    avatar_url: 'https://example.com/bob.png',
+    total_score: 120,
+    total_correct: 10,
+    total_problems: 14,
+    best_streak: 3,
+    games_played: 1,
+    rank: 2,
+  },
 ];
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockLimit = jest.fn().mockResolvedValue({ data: mockScoresData, error: null });
+const mockLimit = jest.fn().mockResolvedValue({ data: mockLeaderboardData, error: null });
 const mockOrder = jest.fn(() => ({ limit: mockLimit }));
 const mockEq = jest.fn(() => ({ order: mockOrder }));
 const mockSelect = jest.fn(() => ({ eq: mockEq }));
@@ -37,7 +58,7 @@ function resetMocks() {
   mockEq.mockClear();
   mockOrder.mockClear();
   mockLimit.mockClear();
-  mockLimit.mockResolvedValue({ data: mockScoresData, error: null });
+  mockLimit.mockResolvedValue({ data: mockLeaderboardData, error: null });
 }
 
 // ---------------------------------------------------------------------------
@@ -50,7 +71,6 @@ describe('useLeaderboard', () => {
   });
 
   it('starts with isLoading true, empty entries, and no error', () => {
-    // Use a never-resolving promise so loading stays true
     mockLimit.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useLeaderboard());
 
@@ -59,42 +79,63 @@ describe('useLeaderboard', () => {
     expect(result.current.error).toBeNull();
   });
 
-  it('fetches and aggregates scores correctly', async () => {
+  it('queries the leaderboard view instead of scores table', async () => {
     const { result } = renderHook(() => useLeaderboard());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    // u1: 100 + 50 = 150, u2: 120
+    expect(mockFrom).toHaveBeenCalledWith('leaderboard');
+    expect(mockSelect).toHaveBeenCalledWith('*');
+  });
+
+  it('fetches leaderboard entries from the view correctly', async () => {
+    const { result } = renderHook(() => useLeaderboard());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
     const alice = result.current.entries.find((e) => e.userId === 'u1');
     const bob = result.current.entries.find((e) => e.userId === 'u2');
 
     expect(alice).toBeDefined();
     expect(alice!.totalScore).toBe(150);
+    expect(alice!.gamesPlayed).toBe(2);
+    expect(alice!.rank).toBe(1);
+    expect(alice!.displayName).toBe('Alice');
+
     expect(bob).toBeDefined();
     expect(bob!.totalScore).toBe(120);
+    expect(bob!.gamesPlayed).toBe(1);
+    expect(bob!.rank).toBe(2);
+    expect(bob!.avatarUrl).toBe('https://example.com/bob.png');
   });
 
-  it('ranks entries by totalScore descending', async () => {
+  it('preserves rank from the database view', async () => {
     const { result } = renderHook(() => useLeaderboard());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.entries[0].userId).toBe('u1');
     expect(result.current.entries[0].rank).toBe(1);
-    expect(result.current.entries[1].userId).toBe('u2');
     expect(result.current.entries[1].rank).toBe(2);
   });
 
-  it('counts gamesPlayed correctly', async () => {
+  it('maps all view fields to LeaderboardEntry', async () => {
     const { result } = renderHook(() => useLeaderboard());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    const alice = result.current.entries.find((e) => e.userId === 'u1');
-    const bob = result.current.entries.find((e) => e.userId === 'u2');
-
-    expect(alice!.gamesPlayed).toBe(2);
-    expect(bob!.gamesPlayed).toBe(1);
+    const entry = result.current.entries[0];
+    expect(entry).toEqual({
+      userId: 'u1',
+      grade: '1',
+      displayName: 'Alice',
+      avatarUrl: null,
+      totalScore: 150,
+      totalCorrect: 12,
+      totalProblems: 15,
+      bestStreak: 5,
+      gamesPlayed: 2,
+      rank: 1,
+    });
   });
 
   it('defaults selectedGrade to "1" when no initialGrade provided', async () => {
@@ -162,7 +203,18 @@ describe('useLeaderboard', () => {
   it('uses "Anonymous" for null display_name', async () => {
     mockLimit.mockResolvedValue({
       data: [
-        { user_id: 'u3', score: 80, profiles: { display_name: null, avatar_url: null } },
+        {
+          user_id: 'u3',
+          grade: '1',
+          display_name: null,
+          avatar_url: null,
+          total_score: 80,
+          total_correct: 5,
+          total_problems: 8,
+          best_streak: 2,
+          games_played: 1,
+          rank: 1,
+        },
       ],
       error: null,
     });
@@ -195,7 +247,37 @@ describe('useLeaderboard', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    // limit * 10 is passed to the query
-    expect(mockLimit).toHaveBeenCalledWith(50);
+    expect(mockLimit).toHaveBeenCalledWith(5);
+  });
+
+  it('handles null values from the view gracefully', async () => {
+    mockLimit.mockResolvedValue({
+      data: [
+        {
+          user_id: null,
+          grade: null,
+          display_name: null,
+          avatar_url: null,
+          total_score: null,
+          total_correct: null,
+          total_problems: null,
+          best_streak: null,
+          games_played: null,
+          rank: null,
+        },
+      ],
+      error: null,
+    });
+
+    const { result } = renderHook(() => useLeaderboard());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const entry = result.current.entries[0];
+    expect(entry.userId).toBe('');
+    expect(entry.displayName).toBe('Anonymous');
+    expect(entry.totalScore).toBe(0);
+    expect(entry.gamesPlayed).toBe(0);
+    expect(entry.rank).toBe(0);
   });
 });
