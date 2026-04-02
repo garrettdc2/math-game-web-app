@@ -73,7 +73,7 @@ jest.mock('@/components/shared/GradeSelector', () => {
 function baseInactiveState() {
   return {
     currentProblem: null,
-    grade: '',
+    grade: null,
     score: 0,
     streak: 0,
     bestStreak: 0,
@@ -85,6 +85,7 @@ function baseInactiveState() {
     celebration: { isActive: false, currentEvent: null, showMilestone: false, milestoneMessage: '' },
     elapsedSeconds: 0,
     isSaving: false,
+    saveError: null,
     startSession: jest.fn(),
     submitAnswer: jest.fn(),
     nextProblem: jest.fn(),
@@ -97,14 +98,21 @@ function baseActiveState() {
   return {
     ...baseInactiveState(),
     isActive: true,
+    grade: '3',
     currentProblem: {
       id: 'p1',
       question: '3 + 4',
       correctAnswer: 7,
       operands: [3, 4],
-      displayTokens: ['3', '+', '4'],
-      topic: 'addition',
-      difficulty: 2,
+      displayTokens: [
+        { type: 'number' as const, value: 3 },
+        { type: 'symbol' as const, symbol: '+' },
+        { type: 'number' as const, value: 4 },
+      ],
+      operation: 'addition',
+      grade: '3',
+      tolerance: 0,
+      hint: 'Add the numbers',
     },
   };
 }

@@ -48,8 +48,13 @@ jest.mock('@/hooks/useCelebration', () => ({
 }));
 
 const mockGenerateProblem = jest.fn(() => mockProblem);
+const mockCheckAnswer = jest.fn((problem: any, answer: number) => {
+  const tolerance = problem.tolerance ?? 0.01;
+  return Math.abs(problem.correctAnswer - answer) <= tolerance;
+});
 jest.mock('@/lib/math/problemGenerator', () => ({
   generateProblem: (...args: unknown[]) => mockGenerateProblem(...args),
+  checkAnswer: (problem: any, answer: number) => mockCheckAnswer(problem, answer),
 }));
 
 const mockInsert = jest.fn().mockResolvedValue({ data: null, error: null });
@@ -113,7 +118,7 @@ describe('useGameState', () => {
     expect(result.current.showingFeedback).toBe(false);
     expect(result.current.currentProblem).toBeNull();
     expect(result.current.elapsedSeconds).toBe(0);
-    expect(result.current.grade).toBe('');
+    expect(result.current.grade).toBeNull();
   });
 
   // 2. startSession sets grade, isActive, generates first problem
@@ -209,9 +214,10 @@ describe('useGameState', () => {
     expect(result.current.problemsTotal).toBe(2);
   });
 
-  // 6. Floating point tolerance
-  it('applies numeric tolerance of ±0.01 for floating point answers', () => {
-    const floatProblem = { ...mockProblem, correctAnswer: 3.14 };
+  // 6. Floating point tolerance — uses the problem's tolerance field
+  it('applies numeric tolerance from problem.tolerance for floating point answers', () => {
+    // Problem with tolerance=0.01 (decimal operations)
+    const floatProblem = { ...mockProblem, correctAnswer: 3.14, tolerance: 0.01 };
     mockGenerateProblem.mockReturnValue(floatProblem);
 
     const { result } = renderHook(() => useGameState());
@@ -248,10 +254,11 @@ describe('useGameState', () => {
     expect(result.current.feedback).toBe('incorrect');
   });
 
-  // Also test that 3.14 is NOT correct for 3.14159
-  it('rejects answer outside tolerance (3.14 for 3.14159)', () => {
-    const piProblem = { ...mockProblem, correctAnswer: 3.14159 };
-    mockGenerateProblem.mockReturnValue(piProblem);
+  // Zero tolerance rejects close-but-not-exact answers
+  it('rejects answer outside zero tolerance', () => {
+    // Problem with tolerance=0 (integer operations)
+    const intProblem = { ...mockProblem, correctAnswer: 5, tolerance: 0 };
+    mockGenerateProblem.mockReturnValue(intProblem);
 
     const { result } = renderHook(() => useGameState());
 
@@ -259,38 +266,26 @@ describe('useGameState', () => {
       result.current.startSession('1');
     });
     act(() => {
-      result.current.submitAnswer('3.14');
+      result.current.submitAnswer('5.001');
     });
 
-    // |3.14 - 3.14159| = 0.00159, which is < 0.01 — so actually correct
-    // Wait — 0.00159 < 0.01, so this IS within tolerance
-    expect(result.current.feedback).toBe('correct');
+    // |5.001 - 5| = 0.001, which is > 0 tolerance → incorrect
+    expect(result.current.feedback).toBe('incorrect');
   });
 
-  // 7. String answers (case-insensitive)
-  it('compares string answers case-insensitively', () => {
-    const stringProblem = { ...mockProblem, correctAnswer: 'Triangle' };
-    mockGenerateProblem.mockReturnValue(stringProblem);
-
+  // 7. Non-numeric answers are marked incorrect (correctAnswer is always a number)
+  it('marks non-numeric input as incorrect since correctAnswer is numeric', () => {
     const { result } = renderHook(() => useGameState());
 
     act(() => {
       result.current.startSession('1');
     });
     act(() => {
-      result.current.submitAnswer('triangle');
+      result.current.submitAnswer('abc');
     });
 
-    expect(result.current.feedback).toBe('correct');
-
-    act(() => {
-      result.current.nextProblem();
-    });
-    act(() => {
-      result.current.submitAnswer('TRIANGLE');
-    });
-
-    expect(result.current.feedback).toBe('correct');
+    // parseFloat('abc') is NaN → always incorrect
+    expect(result.current.feedback).toBe('incorrect');
   });
 
   // 8. Score calculation with streak bonus

@@ -13,6 +13,9 @@ jest.mock('next/navigation', () => ({
     back: jest.fn(),
     prefetch: jest.fn(),
   }),
+  useSearchParams: () => ({
+    get: jest.fn().mockReturnValue(null),
+  }),
 }));
 
 const mockSignInWithEmail = jest.fn().mockResolvedValue(undefined);

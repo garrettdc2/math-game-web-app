@@ -9,6 +9,9 @@ let authStateCallback: ((event: string, session: any) => void) | null = null;
 
 const mockSupabase = {
   auth: {
+    getUser: jest.fn().mockResolvedValue({
+      data: { user: null },
+    }),
     getSession: jest.fn().mockResolvedValue({
       data: { session: null },
     }),
@@ -85,6 +88,9 @@ describe('AuthProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     authStateCallback = null;
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: null },
+    });
     mockSupabase.auth.getSession.mockResolvedValue({
       data: { session: null },
     });
@@ -103,10 +109,10 @@ describe('AuthProvider', () => {
   });
 
   it('provides loading=true initially then false after init', async () => {
-    let resolveGetSession: (v: any) => void;
-    mockSupabase.auth.getSession.mockReturnValue(
+    let resolveGetUser: (v: any) => void;
+    mockSupabase.auth.getUser.mockReturnValue(
       new Promise((r) => {
-        resolveGetSession = r;
+        resolveGetUser = r;
       }),
     );
 
@@ -121,13 +127,16 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('loading')).toHaveTextContent('true');
 
     await act(async () => {
-      resolveGetSession!({ data: { session: null } });
+      resolveGetUser!({ data: { user: null } });
     });
 
     expect(screen.getByTestId('loading')).toHaveTextContent('false');
   });
 
-  it('provides user and session after getSession resolves', async () => {
+  it('provides user and session after getUser resolves', async () => {
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+    });
     mockSupabase.auth.getSession.mockResolvedValue({
       data: { session: mockSession },
     });
@@ -147,6 +156,9 @@ describe('AuthProvider', () => {
   });
 
   it('fetches profile after session init', async () => {
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+    });
     mockSupabase.auth.getSession.mockResolvedValue({
       data: { session: mockSession },
     });
@@ -274,6 +286,9 @@ describe('AuthProvider', () => {
   });
 
   it('signOut clears user, session, and profile', async () => {
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+    });
     mockSupabase.auth.getSession.mockResolvedValue({
       data: { session: mockSession },
     });
