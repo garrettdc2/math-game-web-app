@@ -1,18 +1,21 @@
 """Human approval gates — pause the pipeline and wait for Jira status change."""
 
+from datetime import datetime, timezone
+
 from langsmith import traceable
 from langgraph.types import interrupt
 
-from orchestrator.state import FactoryState
+from orchestrator.state import FactoryState, STATE_MAP
 from orchestrator.audit import audit_log
 from orchestrator.memory import append_memory
 from orchestrator.slack import post_slack
-from orchestrator.jira import get_issue_id, comment_on_issue
+from orchestrator.jira import get_issue_id, comment_on_issue, get_comments_since
 
 
 @traceable(run_type="chain", name="gate")
 async def gate(state: FactoryState, gate_name: str, next_state_hint: str) -> FactoryState:
     ticket_id = state["ticket_id"]
+    gate_opened_at = datetime.now(timezone.utc).isoformat()
 
     # Post gate reached to Jira
     issue_info = await get_issue_id(ticket_id)
@@ -21,7 +24,8 @@ async def gate(state: FactoryState, gate_name: str, next_state_hint: str) -> Fac
             issue_info["id"],
             f"🟡 **{gate_name}** — waiting for human approval.\n\n"
             f"Move the ticket to **{next_state_hint}** to proceed, "
-            f"or **Blocked** to reject.",
+            f"or **Blocked** to reject.\n\n"
+            f"Add comments with feedback for the next agent before approving.",
         )
 
     await post_slack(
@@ -31,23 +35,37 @@ async def gate(state: FactoryState, gate_name: str, next_state_hint: str) -> Fac
     )
     audit_log(ticket_id, gate_name, "waiting for human approval")
 
-    decision = interrupt({"gate": gate_name, "ticket_id": ticket_id})
+    # Validation loop — only accept the expected next status or "Blocked".
+    # Any other status (including the current one) is ignored.
+    while True:
+        decision = interrupt({"gate": gate_name, "ticket_id": ticket_id})
 
-    if decision == "Blocked":
-        error_msg = f"Rejected by human at {gate_name}"
-        append_memory(ticket_id, "Error", error_msg)
+        if decision == "Blocked":
+            error_msg = f"Rejected by human at {gate_name}"
+            append_memory(ticket_id, "Error", error_msg)
 
-        if issue_info:
-            await comment_on_issue(
-                issue_info["id"],
-                f"🔴 **{gate_name}** — rejected. Ticket moved to **Blocked**.",
-            )
+            if issue_info:
+                await comment_on_issue(
+                    issue_info["id"],
+                    f"🔴 **{gate_name}** — rejected. Ticket moved to **Blocked**.",
+                )
 
-        await post_slack(f":red_circle: `{ticket_id}` blocked at {gate_name}")
-        audit_log(ticket_id, "blocked", gate_name)
-        return {**state, "current_state": "Blocked", "error": error_msg}
+            await post_slack(f":red_circle: `{ticket_id}` blocked at {gate_name}")
+            audit_log(ticket_id, "blocked", gate_name)
+            return {**state, "current_state": "Blocked", "error": error_msg}
 
-    # Post approval to Jira
+        if decision == next_state_hint:
+            break
+
+        # Unexpected status — log and re-interrupt to keep waiting
+        audit_log(
+            ticket_id, gate_name,
+            f"ignored '{decision}', waiting for '{next_state_hint}' or 'Blocked'",
+        )
+
+    # Approved — collect human feedback from comments added during the gate wait
+    feedback = await get_comments_since(ticket_id, gate_opened_at)
+
     if issue_info:
         await comment_on_issue(
             issue_info["id"],
@@ -55,7 +73,7 @@ async def gate(state: FactoryState, gate_name: str, next_state_hint: str) -> Fac
         )
 
     audit_log(ticket_id, f"{gate_name}_approved", decision)
-    return state
+    return {**state, "feedback": feedback}
 
 
 async def gate_1(state: FactoryState) -> FactoryState:

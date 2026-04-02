@@ -23,8 +23,9 @@ JIRA_WEBHOOK_SECRET = os.getenv("JIRA_WEBHOOK_SECRET", "")
 JIRA_SUBTASK_ISSUETYPE = os.getenv("JIRA_SUBTASK_ISSUETYPE", "Subtask")  # may be "Sub-task" in some projects
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")
 
-GITHUB_ORG = os.getenv("GITHUB_ORG", "ashtilawat")
-WORKSPACE_DIR = Path("/app/workspace")
+GITHUB_ORG = os.getenv("GITHUB_ORG", "varsitytutors")
+NETLIFY_TEAM_SLUG = os.getenv("NETLIFY_TEAM_SLUG", "nerdyinc")
+WORKSPACE_DIR = Path(os.getenv("WORKSPACE_DIR", "workspace"))
 
 # Timeouts
 AGENT_TIMEOUT = 1800  # 30 minutes

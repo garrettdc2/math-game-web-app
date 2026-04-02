@@ -35,6 +35,6 @@ STATE_MAP: dict[str, str] = {
     "In Spec": "pm_agent",
     "In Arch": "architect_agent",
     "In Dev": "decompose",
-    "In QA": "qa_fanout",
+    "In QA": "qa_entry",
     "In Deploy": "deploy_agent",
 }

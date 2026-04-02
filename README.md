@@ -17,14 +17,14 @@ We tried to figure out the smallest set of building blocks that turns a ticket i
 | 3 | **Orchestrator** | What decides who runs next | LangGraph state machine in `orchestrator/` |
 | 4 | **Execution Env** | Where agents actually run | Docker container |
 | 5 | **Agent Runtime** | The brain behind each agent | Claude Code via `claude-agent-sdk` |
-| 6 | **Integration Layer** | How agents talk to external tools | 5 MCPs: Linear, GitHub, Vercel, Supabase, Slack |
+| 6 | **Integration Layer** | How agents talk to external tools | 5 MCPs: Jira, GitHub, Netlify, Supabase, Slack |
 | 7 | **Quality Gates** | Where humans stay in the loop | LangGraph `interrupt()` + Slack notifications |
-| 8 | **Delivery Target** | Where the app gets deployed | Vercel (frontend) + Supabase (database via Vercel Marketplace) |
+| 8 | **Delivery Target** | Where the app gets deployed | Netlify (frontend) + Supabase (database, standalone) |
 | 9 | **Observability** | How you see what's happening | LangSmith traces + Linear sub-issue tracking |
 | 10 | **Skills** | What each agent knows how to do | `.claude/skills/` — 6 markdown files |
 | 11 | **Identity & Secrets** | How agents authenticate | `.env` file mounted into Docker |
 
-Swap any of these out. Use Jira instead of Linear. Deploy to Railway instead of Vercel. The primitives are the pattern. The tools are interchangeable.
+Swap any of these out. Use Jira instead of Linear. Deploy to Railway instead of Netlify. Use Vercel instead of Netlify. The primitives are the pattern. The tools are interchangeable.
 
 ## How It Works
 
@@ -63,7 +63,7 @@ Review Agent + Test Agent run in parallel
 [GATE 3] 🟡 Waiting: "Move to In Deploy to approve."
         |   🟢 Approved (or 🔴 Blocked)
         |
-Deploy Agent ships to Vercel + Supabase
+Deploy Agent ships to Netlify + Supabase
         |   🟢 Deploy sub-issue checked off
         |
 🟢 Done — final summary posted with repo link + deploy URL
@@ -112,8 +112,8 @@ Every external call is traced as a nested span under the pipeline run:
 ### What you need
 
 - [Docker](https://docs.docker.com/get-docker/)
-- [ngrok](https://ngrok.com/) (or any tunnel to expose port 8000)
-- API keys for [Anthropic](https://console.anthropic.com/), [Linear](https://linear.app/), [GitHub](https://github.com/), [Vercel](https://vercel.com/), [Supabase](https://supabase.com/), [Slack](https://api.slack.com/)
+- [localtunnel](https://github.com/localtunnel/localtunnel) (or any tunnel to expose port 8000)
+- API keys for [Anthropic](https://console.anthropic.com/), [Jira](https://www.atlassian.com/software/jira), [GitHub](https://github.com/), [Netlify](https://www.netlify.com/), [Supabase](https://supabase.com/), [Slack](https://api.slack.com/)
 - [LangSmith](https://smith.langchain.com/) (optional, for tracing)
 
 ### 1. Clone and add your keys
@@ -132,7 +132,7 @@ LINEAR_API_KEY=lin_api_...
 LINEAR_WEBHOOK_SECRET=...
 GITHUB_TOKEN=ghp_...
 GITHUB_ORG=your-org-or-username
-VERCEL_TOKEN=...
+NETLIFY_TOKEN=...
 SUPABASE_TOKEN=...
 SLACK_TOKEN=xoxb-...
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
@@ -189,7 +189,7 @@ curl http://localhost:8000/health
 
 Write a Linear ticket describing what you want built. Move it to **In Spec**.
 
-The factory creates a GitHub repo, then the PM Agent writes a spec. You get a Slack message at Gate 1. Move to **In Arch**. The Architect plans the implementation and breaks it into subtasks. Move to **In Dev**. Parallel Dev Agents build each subtask — progress is posted to the Linear issue. When all subtasks land, a single PR is opened. Review and test agents run on the combined PR. Move to **In Deploy**. The app deploys to Vercel (frontend) and Supabase (database, provisioned automatically via Vercel Marketplace). Done.
+The factory creates a GitHub repo, then the PM Agent writes a spec. You get a Slack message at Gate 1. Move to **In Arch**. The Architect plans the implementation and breaks it into subtasks. Move to **In Dev**. Parallel Dev Agents build each subtask — progress is posted to the Linear issue. When all subtasks land, a single PR is opened. Review and test agents run on the combined PR. Move to **In Deploy**. The app deploys to Netlify (frontend) and Supabase (database, provisioned standalone). Done.
 
 Every step is logged to the Linear issue. Open it to see the full journey.
 

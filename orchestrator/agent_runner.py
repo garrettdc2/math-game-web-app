@@ -79,7 +79,7 @@ async def run_agent(
             allowed_tools=[
                 "Read", "Write", "Edit", "Bash", "Glob", "Grep",
                 "mcp__atlassian__*", "mcp__github__*",
-                "mcp__vercel__*", "mcp__supabase__*", "mcp__slack__*",
+                "mcp__netlify__*", "mcp__supabase__*", "mcp__slack__*",
             ],
         )
         output_parts: list[str] = []

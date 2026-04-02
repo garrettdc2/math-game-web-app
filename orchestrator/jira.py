@@ -9,6 +9,10 @@ from orchestrator.config import (
 )
 from orchestrator.audit import audit_log
 
+# All bot-generated comments start with this prefix so they can be filtered out
+# when collecting human feedback.
+BOT_PREFIX = "🤖 [Factory] "
+
 # Base URL for Jira REST API v3
 _JIRA_BASE = f"https://{JIRA_DOMAIN}.atlassian.net/rest/api/3"
 
@@ -24,7 +28,7 @@ AGENT_STAGES = [
     ("Implementation", "Dev Agent writes code and opens a PR"),
     ("Code Review", "Review Agent checks correctness, security, and conventions"),
     ("Tests", "Test Agent writes and runs Jest tests"),
-    ("Deploy", "Deploy Agent ships to Vercel and verifies health"),
+    ("Deploy", "Deploy Agent ships to Netlify and verifies health"),
 ]
 
 
@@ -147,7 +151,49 @@ async def update_issue_state(ticket_id: str, state_name: str) -> None:
 @traceable(run_type="tool", name="jira_comment")
 async def comment_on_issue(issue_id: str, body: str) -> None:
     """Post a comment on a Jira issue (issue_id may be a key like PROJ-123)."""
-    await _jira("POST", f"issue/{issue_id}/comment", json={"body": _adf_multiline(body)})
+    await _jira("POST", f"issue/{issue_id}/comment", json={"body": _adf_multiline(BOT_PREFIX + body)})
+
+
+
+@traceable(run_type="tool", name="jira_get_comments_since")
+async def get_comments_since(ticket_id: str, since_iso: str) -> str:
+    """Fetch all comments on a Jira issue created after *since_iso*.
+
+    Returns a single string with each comment attributed to its author,
+    separated by blank lines.  Returns "" if there are no matching comments.
+
+    *since_iso* must be an ISO 8601 timestamp (e.g. "2026-04-01T12:00:00Z").
+    """
+    since_dt = datetime.fromisoformat(since_iso.replace("Z", "+00:00"))
+
+    data = await _jira("GET", f"issue/{ticket_id}/comment")
+    if not data:
+        return ""
+
+    comments = data.get("comments", [])
+    parts: list[str] = []
+
+    for comment in comments:
+        created_raw = comment.get("created", "")
+        if not created_raw:
+            continue
+        # Jira timestamps look like "2026-04-01T14:23:45.123+0000"
+        created_dt = datetime.fromisoformat(
+            created_raw.replace("+0000", "+00:00").replace("Z", "+00:00")
+        )
+        if created_dt <= since_dt:
+            continue
+
+        author = (
+            comment.get("author", {}).get("displayName")
+            or comment.get("author", {}).get("emailAddress", "Unknown")
+        )
+        body_adf = comment.get("body", {})
+        body_text = _extract_adf_text(body_adf) if body_adf else ""
+        if body_text and not body_text.startswith("🤖 [Factory]"):
+            parts.append(f"[{author}]: {body_text}")
+
+    return "\n\n".join(parts)
 
 
 # ---------------------------------------------------------------------------

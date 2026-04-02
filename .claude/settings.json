@@ -16,11 +16,11 @@
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       }
     },
-    "vercel": {
+    "netlify": {
       "command": "npx",
-      "args": ["-y", "@vercel/mcp"],
+      "args": ["-y", "@netlify/mcp"],
       "env": {
-        "VERCEL_API_TOKEN": "${VERCEL_TOKEN}"
+        "NETLIFY_AUTH_TOKEN": "${NETLIFY_TOKEN}"
       }
     },
     "supabase": {

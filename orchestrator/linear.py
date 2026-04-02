@@ -18,7 +18,7 @@ AGENT_STAGES = [
     ("Implementation", "Dev Agent writes code and opens a PR"),
     ("Code Review", "Review Agent checks correctness, security, and conventions"),
     ("Tests", "Test Agent writes and runs Jest tests"),
-    ("Deploy", "Deploy Agent ships to Vercel and verifies health"),
+    ("Deploy", "Deploy Agent ships to Netlify and verifies health"),
 ]
 
 
