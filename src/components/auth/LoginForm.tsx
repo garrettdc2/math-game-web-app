@@ -2,12 +2,24 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+
+/** Validate redirectTo is a safe relative path (prevent open redirect) */
+function getSafeRedirect(redirectTo: string | null): string {
+  if (!redirectTo) return '/dashboard';
+  // Only allow relative paths starting with /
+  if (!redirectTo.startsWith('/')) return '/dashboard';
+  // Block protocol-relative URLs (//evil.com)
+  if (redirectTo.startsWith('//')) return '/dashboard';
+  return redirectTo;
+}
 
 export default function LoginForm() {
   const { signInWithEmail, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = getSafeRedirect(searchParams.get('redirectTo'));
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +33,7 @@ export default function LoginForm() {
 
     try {
       await signInWithEmail(email, password);
-      router.push('/dashboard');
+      router.push(redirectTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in');
     } finally {

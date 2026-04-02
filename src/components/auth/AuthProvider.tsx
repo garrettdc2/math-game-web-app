@@ -58,15 +58,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initSession = async () => {
+      // Use getUser() instead of getSession() for server-validated auth.
+      // getSession() reads from local storage without verifying the JWT,
+      // which allows auth state to be spoofed via local storage tampering.
       const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
+        data: { user: validatedUser },
+      } = await supabase.auth.getUser();
 
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+      setUser(validatedUser);
 
-      if (currentSession?.user) {
-        await fetchProfile(currentSession.user.id);
+      if (validatedUser) {
+        // Fetch session for downstream consumers that need the token
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+        setSession(currentSession);
+        await fetchProfile(validatedUser.id);
+      } else {
+        setSession(null);
       }
 
       setLoading(false);
