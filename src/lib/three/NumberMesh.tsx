@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Center, Text3D } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -36,28 +36,46 @@ export default function NumberMesh({
 }: NumberMeshProps) {
   const meshRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
-  const [currentScale, setCurrentScale] = useState(1);
+  // Use a ref for the animated scale to avoid re-renders on every frame
+  const currentScaleRef = useRef(1);
+  // Use a ref for the material to avoid re-creating on hover
+  const materialRef = useRef<THREE.MeshStandardMaterial>(
+    new THREE.MeshStandardMaterial({
+      color: new THREE.Color(color),
+      metalness: 0.3,
+      roughness: 0.4,
+      emissive: new THREE.Color(color).multiplyScalar(0.1),
+    })
+  );
 
-  // Smooth hover scale animation
+  // Update material color when the color prop changes (without re-creating)
+  useEffect(() => {
+    const mat = materialRef.current;
+    mat.color.set(color);
+    mat.emissive.set(color).multiplyScalar(hovered ? 0.3 : 0.1);
+  }, [color, hovered]);
+
+  // Dispose material on unmount to prevent GPU memory leak
+  useEffect(() => {
+    const mat = materialRef.current;
+    return () => {
+      mat.dispose();
+    };
+  }, []);
+
+  // Smooth hover scale animation — mutate refs directly, no setState
   useFrame((_, delta) => {
     const targetScale = hovered ? 1.1 : 1;
-    setCurrentScale((prev) => THREE.MathUtils.lerp(prev, targetScale, delta * 8));
+    currentScaleRef.current = THREE.MathUtils.lerp(
+      currentScaleRef.current,
+      targetScale,
+      delta * 8
+    );
 
     if (meshRef.current) {
-      meshRef.current.scale.setScalar(currentScale * scale);
+      meshRef.current.scale.setScalar(currentScaleRef.current * scale);
     }
   });
-
-  const material = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: new THREE.Color(color),
-        metalness: 0.3,
-        roughness: 0.4,
-        emissive: new THREE.Color(color).multiplyScalar(hovered ? 0.3 : 0.1),
-      }),
-    [color, hovered]
-  );
 
   return (
     <group
@@ -94,7 +112,7 @@ export default function NumberMesh({
           bevelSize={0.02}
           bevelOffset={0}
           bevelSegments={5}
-          material={material}
+          material={materialRef.current}
         >
           {value}
         </Text3D>

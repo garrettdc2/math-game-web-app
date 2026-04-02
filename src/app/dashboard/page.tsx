@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import GradeSelector, {
-  type GradeLevel,
-} from '@/components/shared/GradeSelector';
+import { type Grade } from '@/types';
+import GradeSelector from '@/components/shared/GradeSelector';
 import { createClient } from '@/lib/supabase/client';
 
 interface UserStats {
@@ -19,7 +18,7 @@ interface UserStats {
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [selectedGrade, setSelectedGrade] = useState<GradeLevel | null>(null);
+  const [selectedGrade, setSelectedGrade] = useState<Grade | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [savingGrade, setSavingGrade] = useState(false);
@@ -46,7 +45,7 @@ export default function DashboardPage() {
         .single();
 
       if (profile?.selected_grade) {
-        setSelectedGrade(profile.selected_grade as GradeLevel);
+        setSelectedGrade(profile.selected_grade as Grade);
       }
 
       // Fetch aggregated stats
@@ -85,7 +84,7 @@ export default function DashboardPage() {
     loadData();
   }, [user]);
 
-  const handleGradeSelect = async (grade: GradeLevel) => {
+  const handleGradeSelect = async (grade: Grade) => {
     setSelectedGrade(grade);
     setSavingGrade(true);
 

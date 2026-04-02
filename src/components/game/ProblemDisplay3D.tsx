@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, Component, type ReactNode } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, Center, Text3D } from '@react-three/drei';
 import type { DisplayToken } from '@/lib/math/types';
@@ -9,6 +9,46 @@ import SymbolMesh from '@/lib/three/SymbolMesh';
 import InteractionControls from '@/lib/three/InteractionControls';
 import * as THREE from 'three';
 
+// ---------------------------------------------------------------------------
+// Error Boundary — catches Three.js / WebGPU / WebGL runtime crashes and
+// renders a message prompting the parent to fall back to 2D.
+// ---------------------------------------------------------------------------
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class Canvas3DErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[ProblemDisplay3D] 3D rendering failed, falling back:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+
 interface ProblemDisplay3DProps {
   /** The display tokens to render as 3D objects */
   tokens: DisplayToken[];
@@ -16,6 +56,8 @@ interface ProblemDisplay3DProps {
   answered?: boolean;
   /** Visual feedback state */
   feedback?: 'correct' | 'incorrect' | null;
+  /** Optional callback invoked when the 3D renderer crashes */
+  onRenderError?: () => void;
 }
 
 /** Spacing between tokens along the x-axis in world units */
@@ -48,13 +90,6 @@ function getTokenDisplayValue(token: DisplayToken): string {
 }
 
 /**
- * Returns whether a token should be rendered as an operator (cyan) or number (purple).
- */
-function isOperatorToken(token: DisplayToken): boolean {
-  return token.type === 'symbol';
-}
-
-/**
  * Generate a stable key for a token based on its index and content.
  */
 function tokenKey(token: DisplayToken, index: number): string {
@@ -69,7 +104,6 @@ function FractionMesh3D({
   denominator,
   position,
   color,
-  interactive,
 }: {
   numerator: string;
   denominator: string;
@@ -311,6 +345,25 @@ function LoadingIndicator() {
 }
 
 /**
+ * Fallback UI shown when the 3D renderer crashes (GPU driver error,
+ * WebGL context lost, etc.). Suggests the user refresh or notifies the
+ * parent to switch to the 2D renderer.
+ */
+function RenderErrorFallback() {
+  return (
+    <div className="flex h-[300px] w-full flex-col items-center justify-center gap-3 rounded-2xl bg-gray-950/80 text-center sm:h-[400px]">
+      <span className="text-4xl" role="img" aria-label="warning">⚠️</span>
+      <p className="text-lg font-semibold text-white">3D rendering unavailable</p>
+      <p className="max-w-md text-sm text-gray-400">
+        Your browser encountered an issue initializing the 3D engine. The app
+        will switch to the 2D renderer automatically. Try refreshing if this
+        persists.
+      </p>
+    </div>
+  );
+}
+
+/**
  * ProblemDisplay3D — R3F Canvas scene that renders math problem tokens as
  * interactive 3D text meshes.
  *
@@ -322,6 +375,7 @@ function LoadingIndicator() {
  * - Responsive sizing via R3F's built-in resize handling
  * - Contact shadows and environment lighting for visual polish
  * - Feedback color changes (green for correct, red for incorrect)
+ * - Error boundary catches runtime 3D failures and shows a fallback
  */
 export default function ProblemDisplay3D({
   tokens,
@@ -331,65 +385,67 @@ export default function ProblemDisplay3D({
   const positions = useMemo(() => getTokenPositions(tokens.length), [tokens.length]);
 
   return (
-    <div className="relative h-[300px] w-full rounded-2xl bg-gray-950/80 sm:h-[400px]">
-      <Canvas
-        camera={{ position: [0, 2, 8], fov: 50 }}
-        dpr={[1, 2]}
-        style={{ borderRadius: '1rem' }}
-      >
-        {/* Lighting */}
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[5, 5, 5]} intensity={0.8} castShadow />
-        <pointLight position={[-5, 3, -5]} intensity={0.3} color="#22d3ee" />
+    <Canvas3DErrorBoundary fallback={<RenderErrorFallback />}>
+      <div className="relative h-[300px] w-full rounded-2xl bg-gray-950/80 sm:h-[400px]">
+        <Canvas
+          camera={{ position: [0, 2, 8], fov: 50 }}
+          dpr={[1, 2]}
+          style={{ borderRadius: '1rem' }}
+        >
+          {/* Lighting */}
+          <ambientLight intensity={0.4} />
+          <directionalLight position={[5, 5, 5]} intensity={0.8} castShadow />
+          <pointLight position={[-5, 3, -5]} intensity={0.3} color="#22d3ee" />
 
-        {/* Environment for reflections */}
-        <Environment preset="night" />
+          {/* Environment for reflections */}
+          <Environment preset="night" />
 
-        {/* Contact shadows for grounding */}
-        <ContactShadows
-          position={[0, -1.2, 0]}
-          opacity={0.4}
-          scale={20}
-          blur={2}
-          far={4}
+          {/* Contact shadows for grounding */}
+          <ContactShadows
+            position={[0, -1.2, 0]}
+            opacity={0.4}
+            scale={20}
+            blur={2}
+            far={4}
+          />
+
+          <Suspense fallback={<LoadingIndicator />}>
+            {/* Render each token as a 3D mesh */}
+            {tokens.map((token, i) => (
+              <TokenMesh
+                key={tokenKey(token, i)}
+                token={token}
+                xPos={positions[i]}
+                interactive={!answered}
+                feedback={feedback}
+              />
+            ))}
+          </Suspense>
+
+          {/* Orbit controls — limited to prevent disorienting rotations */}
+          <OrbitControls
+            enableZoom
+            enablePan={false}
+            minDistance={4}
+            maxDistance={15}
+            maxPolarAngle={Math.PI / 2}
+            minPolarAngle={Math.PI / 6}
+            autoRotate={!answered && tokens.length > 0}
+            autoRotateSpeed={0.5}
+          />
+        </Canvas>
+
+        {/* Overlay gradient border glow */}
+        <div
+          className={`pointer-events-none absolute inset-0 rounded-2xl border transition-colors duration-300 ${
+            feedback === 'correct'
+              ? 'border-green-500/50 shadow-[0_0_30px_rgba(74,222,128,0.2)]'
+              : feedback === 'incorrect'
+                ? 'border-red-500/50 shadow-[0_0_30px_rgba(248,113,113,0.2)]'
+                : 'border-white/10'
+          }`}
         />
-
-        <Suspense fallback={<LoadingIndicator />}>
-          {/* Render each token as a 3D mesh */}
-          {tokens.map((token, i) => (
-            <TokenMesh
-              key={tokenKey(token, i)}
-              token={token}
-              xPos={positions[i]}
-              interactive={!answered}
-              feedback={feedback}
-            />
-          ))}
-        </Suspense>
-
-        {/* Orbit controls — limited to prevent disorienting rotations */}
-        <OrbitControls
-          enableZoom
-          enablePan={false}
-          minDistance={4}
-          maxDistance={15}
-          maxPolarAngle={Math.PI / 2}
-          minPolarAngle={Math.PI / 6}
-          autoRotate={!answered && tokens.length > 0}
-          autoRotateSpeed={0.5}
-        />
-      </Canvas>
-
-      {/* Overlay gradient border glow */}
-      <div
-        className={`pointer-events-none absolute inset-0 rounded-2xl border transition-colors duration-300 ${
-          feedback === 'correct'
-            ? 'border-green-500/50 shadow-[0_0_30px_rgba(74,222,128,0.2)]'
-            : feedback === 'incorrect'
-              ? 'border-red-500/50 shadow-[0_0_30px_rgba(248,113,113,0.2)]'
-              : 'border-white/10'
-        }`}
-      />
-    </div>
+      </div>
+    </Canvas3DErrorBoundary>
   );
 }

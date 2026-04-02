@@ -1,39 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { type Grade, GRADES } from '@/types';
 
-export type GradeLevel =
-  | 'K'
-  | '1'
-  | '2'
-  | '3'
-  | '4'
-  | '5'
-  | '6'
-  | '7'
-  | '8'
-  | '9'
-  | '10'
-  | '11'
-  | '12';
+/** @deprecated Use `Grade` from `@/types` instead. Kept for backward compatibility. */
+export type GradeLevel = Grade;
 
-const GRADES: GradeLevel[] = [
-  'K',
-  '1',
-  '2',
-  '3',
-  '4',
-  '5',
-  '6',
-  '7',
-  '8',
-  '9',
-  '10',
-  '11',
-  '12',
-];
-
-const GRADE_LABELS: Record<GradeLevel, string> = {
+const GRADE_LABELS: Record<Grade, string> = {
   K: 'Kindergarten',
   '1': '1st Grade',
   '2': '2nd Grade',
@@ -49,7 +22,7 @@ const GRADE_LABELS: Record<GradeLevel, string> = {
   '12': '12th Grade',
 };
 
-const GRADE_TOPICS: Record<GradeLevel, string> = {
+const GRADE_TOPICS: Record<Grade, string> = {
   K: 'Counting & Basic Shapes',
   '1': 'Addition & Subtraction to 20',
   '2': 'Place Value & Measurement',
@@ -66,8 +39,8 @@ const GRADE_TOPICS: Record<GradeLevel, string> = {
 };
 
 interface GradeSelectorProps {
-  selectedGrade?: GradeLevel | null;
-  onSelect: (grade: GradeLevel) => void;
+  selectedGrade?: Grade | null;
+  onSelect: (grade: Grade) => void;
   compact?: boolean;
 }
 
@@ -76,13 +49,13 @@ export default function GradeSelector({
   onSelect,
   compact = false,
 }: GradeSelectorProps) {
-  const [hoveredGrade, setHoveredGrade] = useState<GradeLevel | null>(null);
+  const [hoveredGrade, setHoveredGrade] = useState<Grade | null>(null);
 
   if (compact) {
     return (
       <select
         value={selectedGrade ?? ''}
-        onChange={(e) => onSelect(e.target.value as GradeLevel)}
+        onChange={(e) => onSelect(e.target.value as Grade)}
         className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-white backdrop-blur-sm transition-colors hover:border-purple-400/50 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/20"
       >
         <option value="" disabled>
