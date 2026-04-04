@@ -4,15 +4,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-[13px] font-medium transition-all duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-page disabled:pointer-events-none disabled:opacity-50 cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-[13px] font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer",
   {
     variants: {
       variant: {
-        default: "bg-accent text-page hover:bg-accent-hover",
-        ghost: "text-text-secondary border border-border hover:bg-accent-muted hover:text-text-primary hover:border-white/10",
-        danger: "text-status-failed border border-status-failed/15 hover:bg-status-failed/6",
-        success: "bg-accent text-page hover:bg-accent-hover",
-        secondary: "bg-elevated text-text-primary border border-border hover:bg-hover",
+        default: "bg-gradient-to-br from-primary to-primary-dim text-on-primary hover:from-primary-dim hover:to-[#004d61]",
+        ghost: "text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
+        danger: "text-error border border-error/20 hover:bg-error/5",
+        success: "bg-gradient-to-br from-primary to-primary-dim text-on-primary hover:from-primary-dim hover:to-[#004d61]",
+        secondary: "bg-transparent text-primary border border-outline-ghost hover:bg-surface-container",
       },
       size: {
         default: "h-9 px-4 py-2",

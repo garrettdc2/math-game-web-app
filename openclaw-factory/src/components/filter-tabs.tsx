@@ -23,7 +23,7 @@ export function FilterTabs({ value, onChange, counts }: FilterTabsProps) {
           <TabsTrigger key={key} value={key}>
             {label}
             {counts[key] > 0 && (
-              <span className="ml-1.5 rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-text-secondary tabular-nums">
+              <span className="ml-1.5 rounded-full bg-surface-container-low px-1.5 py-0.5 text-[10px] text-on-surface-variant tabular-nums">
                 {counts[key]}
               </span>
             )}

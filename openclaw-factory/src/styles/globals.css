@@ -1,27 +1,34 @@
-@import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
 
 @theme {
-  --color-page: #09090b;
-  --color-card: #0f0f11;
-  --color-elevated: #18181b;
-  --color-hover: #1c1c1f;
-  --color-border: rgba(255, 255, 255, 0.06);
-  --color-border-subtle: rgba(255, 255, 255, 0.03);
+  /* Nexus Slate - Light Theme */
+  --color-surface: #f7f9fb;
+  --color-surface-container: #e8eff3;
+  --color-surface-container-low: #f0f4f7;
+  --color-surface-container-lowest: #ffffff;
 
-  --color-text-primary: #fafafa;
-  --color-text-secondary: #71717a;
-  --color-text-tertiary: #52525b;
+  --color-on-surface: #2a3439;
+  --color-on-surface-variant: #566166;
 
-  --color-accent: #fafafa;
-  --color-accent-hover: #e4e4e7;
-  --color-accent-muted: rgba(255, 255, 255, 0.08);
+  --color-primary: #006781;
+  --color-primary-dim: #005a71;
+  --color-on-primary: #eff9ff;
 
-  --color-status-running: #93c5fd;
-  --color-status-done: #6ee7b7;
-  --color-status-waiting: #fcd34d;
-  --color-status-failed: #fca5a5;
+  --color-outline-variant: #a9b4b9;
+  --color-outline-ghost: rgba(169, 180, 185, 0.15);
 
+  --color-error: #9f403d;
+
+  /* Shadows */
+  --shadow-lifted: 0 1px 3px rgba(42, 52, 57, 0.04), 0 1px 2px rgba(42, 52, 57, 0.02);
+  --shadow-elevated: 0 4px 12px rgba(42, 52, 57, 0.08), 0 2px 4px rgba(42, 52, 57, 0.04);
+
+  /* Transitions */
+  --transition-fast: 150ms ease-out;
+  --transition-normal: 200ms ease-out;
+
+  /* Typography */
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 
@@ -32,8 +39,8 @@
 /* --- Base --- */
 body {
   font-family: var(--font-sans);
-  background-color: var(--color-page);
-  color: var(--color-text-primary);
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
   min-height: 100vh;
   letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
@@ -49,15 +56,15 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(42, 52, 57, 0.12);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(42, 52, 57, 0.2);
 }
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  scrollbar-color: rgba(42, 52, 57, 0.12) transparent;
 }
 
 /* --- Keyframes --- */
@@ -67,9 +74,9 @@ body {
 
 /* --- Sonner toast overrides --- */
 [data-sonner-toaster] {
-  --normal-bg: var(--color-elevated) !important;
-  --normal-border: var(--color-border) !important;
-  --normal-text: var(--color-text-primary) !important;
+  --normal-bg: var(--color-surface-container-lowest) !important;
+  --normal-border: var(--color-outline-ghost) !important;
+  --normal-text: var(--color-on-surface) !important;
   font-family: var(--font-sans) !important;
 }
 

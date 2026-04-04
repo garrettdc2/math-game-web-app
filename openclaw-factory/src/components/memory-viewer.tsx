@@ -29,22 +29,22 @@ export function MemoryViewer({ taskId }: MemoryViewerProps) {
       >
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <Brain className="h-4 w-4 text-text-secondary" />
+            <Brain className="h-4 w-4 text-on-surface-variant" />
             Agent Memory
           </span>
           {expanded ? (
-            <ChevronUp className="h-4 w-4 text-text-tertiary" />
+            <ChevronUp className="h-4 w-4 text-on-surface-variant" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-text-tertiary" />
+            <ChevronDown className="h-4 w-4 text-on-surface-variant" />
           )}
         </CardTitle>
       </CardHeader>
       {expanded && (
         <CardContent>
           {loading ? (
-            <div className="h-20 rounded-lg bg-elevated" />
+            <div className="h-20 rounded-lg bg-surface-container" />
           ) : (
-            <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-page p-3 text-xs text-text-secondary font-mono border border-border">
+            <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-surface-container-low p-3 text-xs text-on-surface-variant font-mono">
               {content || "No memory found"}
             </pre>
           )}

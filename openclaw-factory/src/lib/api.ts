@@ -71,3 +71,65 @@ export function getPipelineMemory(taskId: string) {
 export function getPipelineLogs(taskId: string) {
   return request<{ logs: string[] }>(`/pipeline/${taskId}/logs`);
 }
+
+// Analytics types
+export interface AnalyticsSummary {
+  total: number;
+  completed: number;
+  failed: number;
+  active: number;
+  avgCycleHours: number;
+  failureRate: number;
+}
+
+export interface ThroughputDay {
+  date: string;
+  label: string;
+  started: number;
+  completed: number;
+}
+
+export interface StageDuration {
+  stage: string;
+  avgHours: number;
+  count: number;
+}
+
+export interface FailureCategory {
+  name: string;
+  count: number;
+  pct: number;
+}
+
+export interface EventRecord {
+  seq: number;
+  task_id: string;
+  event_type: string;
+  source: string;
+  data: Record<string, unknown>;
+  created_at: string;
+}
+
+export function getAnalyticsSummary() {
+  return request<AnalyticsSummary>("/analytics/summary");
+}
+
+export function getAnalyticsThroughput() {
+  return request<{ throughput: ThroughputDay[] }>("/analytics/throughput");
+}
+
+export function getStageDurations() {
+  return request<{ durations: StageDuration[] }>("/analytics/stage-durations");
+}
+
+export function getFailureAnalysis() {
+  return request<{ failures: FailureCategory[]; totalFailed: number }>("/analytics/failures");
+}
+
+export function getEventHistory(after: number = 0, limit: number = 50) {
+  return request<{ events: EventRecord[]; has_more: boolean }>(`/events/history?after=${after}&limit=${limit}`);
+}
+
+export function getGatewayStatus() {
+  return request<{ status: string; url: string; attemptCount: number; lastError?: string }>("/gateway/status");
+}

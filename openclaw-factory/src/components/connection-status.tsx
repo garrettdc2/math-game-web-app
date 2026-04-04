@@ -20,7 +20,7 @@ export function ConnectionStatus() {
   const config = STATUS_CONFIG[connectionStatus];
 
   return (
-    <div className="flex items-center gap-2 text-xs text-white/60">
+    <div className="flex items-center gap-2 text-xs text-on-surface-variant">
       <span className={`inline-block h-2 w-2 rounded-full ${config.dotClass}`} />
       <span>
         {config.label}
@@ -29,7 +29,7 @@ export function ConnectionStatus() {
       {connectionStatus === "disconnected" && (
         <button
           onClick={reconnect}
-          className="ml-1 rounded px-1.5 py-0.5 text-xs text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+          className="ml-1 rounded px-1.5 py-0.5 text-xs text-primary hover:text-primary hover:bg-primary/10 transition-colors"
         >
           Retry
         </button>

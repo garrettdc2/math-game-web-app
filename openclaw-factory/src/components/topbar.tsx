@@ -1,38 +1,43 @@
-import { Factory, Wifi, WifiOff } from "lucide-react";
-import { useSSE } from "@/hooks/use-sse";
-import { cn } from "@/lib/utils";
+import { useLocation } from "react-router-dom";
+import { Search, Bell, User } from "lucide-react";
 
 export function Topbar() {
-  const { connected } = useSSE();
+  const location = useLocation();
+
+  const getSearchPlaceholder = () => {
+    if (location.pathname.startsWith("/pipeline/")) return "Search factory logs...";
+    if (location.pathname === "/new") return "Search factory assets...";
+    if (location.pathname === "/pipelines") return "Search pipelines...";
+    return "Search pipelines...";
+  };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-page/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04]">
-            <Factory className="h-4 w-4 text-text-primary" />
-          </div>
-          <span className="text-sm font-semibold tracking-tight">
-            Software Factory
-          </span>
-        </div>
+    <header className="sticky top-0 z-30 bg-surface-container-lowest/70 backdrop-blur-xl border-b border-outline-ghost">
+      <div className="flex h-14 items-center justify-between px-6">
+        {/* Left: Brand */}
+        <span className="text-lg font-bold tracking-tighter text-primary">Precision Engine</span>
 
-        <div className="flex items-center gap-2">
-          <div
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-              connected
-                ? "bg-status-done/8 text-status-done"
-                : "bg-status-failed/8 text-status-failed"
-            )}
-          >
-            {connected ? (
-              <Wifi className="h-3 w-3" />
-            ) : (
-              <WifiOff className="h-3 w-3" />
-            )}
-            {connected ? "Live" : "Disconnected"}
+        {/* Right: Search + Actions */}
+        <div className="flex items-center gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-on-surface-variant" />
+            <input
+              type="text"
+              placeholder={getSearchPlaceholder()}
+              className="h-9 w-64 rounded-lg bg-surface-container-low pl-9 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant border border-outline-ghost focus:border-primary focus:outline-none transition-colors"
+            />
           </div>
+
+          {/* Notifications */}
+          <button className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-surface-container transition-colors">
+            <Bell className="h-4 w-4 text-on-surface-variant" />
+          </button>
+
+          {/* User */}
+          <button className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-on-primary">
+            <User className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </header>

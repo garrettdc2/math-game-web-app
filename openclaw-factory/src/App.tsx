@@ -4,24 +4,30 @@ import { SSEProvider } from "@/hooks/use-sse";
 import { useToastNotifications } from "@/hooks/use-toasts";
 import { ConnectionStatus } from "@/components/connection-status";
 import { Topbar } from "@/components/topbar";
+import { Sidebar } from "@/components/sidebar";
 import DashboardPage from "@/pages/dashboard";
 import PipelinePage from "@/pages/pipeline";
 import NewPipelinePage from "@/pages/new-pipeline";
+import PipelineManagementPage from "@/pages/pipeline-management";
 
 function AppShell() {
   useToastNotifications();
 
   return (
-    <div className="min-h-screen">
-      <Topbar />
-      <div className="fixed top-3 right-4 z-50">
-        <ConnectionStatus />
-      </div>
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/pipeline/:taskId" element={<PipelinePage />} />
-        <Route path="/new" element={<NewPipelinePage />} />
-      </Routes>
+    <div className="min-h-screen flex">
+      <Sidebar />
+      <main className="flex-1 bg-surface overflow-auto">
+        <Topbar />
+        <div className="fixed top-3 right-4 z-50">
+          <ConnectionStatus />
+        </div>
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/pipelines" element={<PipelineManagementPage />} />
+          <Route path="/pipeline/:taskId" element={<PipelinePage />} />
+          <Route path="/new" element={<NewPipelinePage />} />
+        </Routes>
+      </main>
     </div>
   );
 }
@@ -33,12 +39,12 @@ export default function App() {
         <AppShell />
         <Toaster
           position="bottom-right"
-          theme="dark"
+          theme="light"
           toastOptions={{
             style: {
-              background: "var(--color-elevated)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              color: "var(--color-text-primary)",
+              background: "var(--color-surface-container-lowest)",
+              border: "1px solid var(--color-outline-ghost)",
+              color: "var(--color-on-surface)",
             },
           }}
         />

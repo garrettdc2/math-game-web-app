@@ -13,6 +13,7 @@ import { eventBus, persistAndPublish } from "./routes/events.js";
 import pipelineRoutes from "./routes/pipeline.js";
 import eventRoutes from "./routes/events.js";
 import healthRoutes from "./routes/health.js";
+import analyticsRoutes from "./routes/analytics.js";
 
 /**
  * Extract taskId from an OpenClaw sessionKey.
@@ -76,6 +77,7 @@ const app = new Hono();
 app.route("/api", pipelineRoutes);
 app.route("/api", eventRoutes);
 app.route("/api", healthRoutes);
+app.route("/api", analyticsRoutes);
 
 // Serve built SPA in production
 const clientDir = resolve("dist/client");

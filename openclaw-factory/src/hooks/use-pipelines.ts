@@ -5,16 +5,27 @@ import { useSSEEvent, useSSE } from "./use-sse";
 const STAGES = ["spec", "architecture", "development", "qa", "deploy"] as const;
 const STAGE_LABELS: Record<string, string> = {
   spec: "Spec",
-  architecture: "Architecture",
-  development: "Development",
+  architecture: "Arch",
+  development: "Dev",
   qa: "QA",
   deploy: "Deploy",
   done: "Done",
   blocked: "Blocked",
 };
 
+const BADGE_LABELS: Record<string, string> = {
+  spec: "IN SPEC",
+  architecture: "IN ARCH",
+  development: "DEV",
+  qa: "QA",
+  deploy: "DEPLOY",
+  done: "SUCCESS",
+  blocked: "FAILED",
+};
+
 export interface EnrichedPipeline extends PipelineDict {
   stage_label: string;
+  badge_label: string;
   stages: Array<{ name: string; label: string; status: string }>;
   pending_gate: PendingGate | null;
 }
@@ -42,6 +53,7 @@ function enrichPipeline(
     ...p,
     has_pending_gate: hasGate,
     stage_label: STAGE_LABELS[p.stage] || p.stage,
+    badge_label: BADGE_LABELS[p.stage] || p.stage.toUpperCase(),
     stages,
     pending_gate: gates.find((g) => g.task_id === p.task_id) || null,
   };

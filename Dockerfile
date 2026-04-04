@@ -1,16 +1,17 @@
-FROM python:3.12-slim
+# Stage 1: Install deps + build
+FROM node:20-slim AS builder
 WORKDIR /app
+COPY openclaw-factory/package.json openclaw-factory/package-lock.json ./
+RUN npm ci
+COPY openclaw-factory/ .
+RUN npm run build
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY orchestrator/ ./orchestrator/
-COPY memory/ ./memory/
-COPY templates/ ./templates/
-
-RUN mkdir -p audit
-
-RUN useradd -m factory && chown -R factory:factory /app
-USER factory
-
-CMD ["uvicorn", "orchestrator:app", "--host", "0.0.0.0", "--port", "8000"]
+# Stage 2: Production image
+FROM node:20-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/package.json /app/package-lock.json ./
+RUN npm ci --omit=dev
+COPY --from=builder /app/dist ./dist
+EXPOSE 8000
+CMD ["node", "dist/server/index.js"]

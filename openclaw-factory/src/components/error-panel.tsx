@@ -39,13 +39,13 @@ export function ErrorPanel({ taskId, error, stage, onAction }: ErrorPanelProps) 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-status-failed">
+        <CardTitle className="flex items-center gap-2 text-error">
           <AlertTriangle className="h-4 w-4" />
           Pipeline Blocked
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <pre className="whitespace-pre-wrap rounded-lg bg-status-failed/4 border border-status-failed/8 p-3 text-xs text-status-failed font-mono">
+        <pre className="whitespace-pre-wrap rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-error font-mono">
           {error}
         </pre>
         <div className="flex gap-2">
@@ -75,7 +75,7 @@ export function ErrorPanel({ taskId, error, stage, onAction }: ErrorPanelProps) 
             </Button>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-text-secondary">Sure?</span>
+              <span className="text-xs text-on-surface-variant">Sure?</span>
               <Button
                 variant="danger"
                 size="sm"

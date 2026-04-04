@@ -1,20 +1,24 @@
 .PHONY: start stop dev docker-up docker-down
 
-# Local development — OpenClaw runs in Docker (sandboxed), factory server runs locally
+# Local development — OpenClaw runs in Docker, factory server + Vite dev server run locally
+dev:
+	@echo "Starting OpenClaw gateway (Docker)..."
+	@docker compose up -d openclaw
+	@echo "OpenClaw dashboard: http://localhost:18789"
+	@echo "Starting factory dev server (Hono + Vite HMR)..."
+	cd openclaw-factory && npm run dev
+
+# Production start (after build)
 start:
 	@echo "Starting OpenClaw gateway (Docker)..."
 	@docker compose up -d openclaw
 	@echo "OpenClaw dashboard: http://localhost:18789"
 	@echo "Starting factory server on :8000..."
-	uvicorn orchestrator:app --host 0.0.0.0 --port 8000
+	cd openclaw-factory && npm run start
 
-# Local development with auto-reload
-dev:
-	@echo "Starting OpenClaw gateway (Docker)..."
-	@docker compose up -d openclaw
-	@echo "OpenClaw dashboard: http://localhost:18789"
-	@echo "Starting factory server on :8000 (reload mode)..."
-	uvicorn orchestrator:app --host 0.0.0.0 --port 8000 --reload
+# Build for production
+build:
+	cd openclaw-factory && npm run build
 
 # Stop all services
 stop:

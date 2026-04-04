@@ -7,13 +7,13 @@ export function EmptyState() {
 
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-elevated border border-border mb-6">
-        <Rocket className="h-8 w-8 text-text-tertiary" />
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-container mb-6">
+        <Rocket className="h-8 w-8 text-on-surface-variant" />
       </div>
-      <h2 className="text-lg font-semibold text-text-primary mb-2">
+      <h2 className="text-lg font-semibold text-on-surface mb-2">
         No pipelines yet
       </h2>
-      <p className="max-w-sm text-sm text-text-secondary mb-6">
+      <p className="max-w-sm text-sm text-on-surface-variant mb-6">
         Start your first pipeline to see it appear here. Each pipeline moves
         through spec, architecture, development, QA, and deploy.
       </p>
