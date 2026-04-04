@@ -1,0 +1,79 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");
+
+@theme {
+  --color-page: #09090b;
+  --color-card: #0f0f11;
+  --color-elevated: #18181b;
+  --color-hover: #1c1c1f;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-subtle: rgba(255, 255, 255, 0.03);
+
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #71717a;
+  --color-text-tertiary: #52525b;
+
+  --color-accent: #fafafa;
+  --color-accent-hover: #e4e4e7;
+  --color-accent-muted: rgba(255, 255, 255, 0.08);
+
+  --color-status-running: #93c5fd;
+  --color-status-done: #6ee7b7;
+  --color-status-waiting: #fcd34d;
+  --color-status-failed: #fca5a5;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Base --- */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-page);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+/* --- Keyframes --- */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Sonner toast overrides --- */
+[data-sonner-toaster] {
+  --normal-bg: var(--color-elevated) !important;
+  --normal-border: var(--color-border) !important;
+  --normal-text: var(--color-text-primary) !important;
+  font-family: var(--font-sans) !important;
+}
+
+/* --- Utility --- */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

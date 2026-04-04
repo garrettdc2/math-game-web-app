@@ -1,5 +1,7 @@
 .env
 factory.db
+factory.db-shm
+factory.db-wal
 __pycache__/
 node_modules/
 *.pyc
@@ -7,3 +9,6 @@ node_modules/
 workspace/
 audit/
 memory/
+pipelines.db
+pipelines.db-shm
+pipelines.db-wal

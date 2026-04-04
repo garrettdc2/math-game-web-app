@@ -1,0 +1,76 @@
+{
+  "gateway": {
+    "auth": {
+      "mode": "token",
+      "token": "factory-local-dev"
+    },
+    "controlUi": {
+      "allowedOrigins": ["http://localhost:18789"],
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true
+    },
+    "http": {
+      "endpoints": {
+        "chatCompletions": { "enabled": true }
+      }
+    }
+  },
+  "tools": {
+    "profile": "full",
+    "exec": {
+      "host": "gateway",
+      "security": "full",
+      "ask": "off"
+    }
+  },
+  "plugins": {
+    "entries": {
+      "acpx": {
+        "enabled": true,
+        "config": {
+          "permissionMode": "approve-all",
+          "nonInteractivePermissions": "deny"
+        }
+      }
+    }
+  },
+  "hooks": {
+    "enabled": true,
+    "token": "factory-webhook-secret",
+    "path": "/hooks",
+    "allowRequestSessionKey": true,
+    "allowedSessionKeyPrefixes": ["hook:", "hook:factory:"]
+  },
+  "agents": {
+    "defaults": {
+      "sandbox": { "mode": "off" },
+      "subagents": {
+        "maxSpawnDepth": 2,
+        "maxChildrenPerAgent": 6,
+        "maxConcurrent": 4,
+        "runTimeoutSeconds": 1800
+      }
+    },
+    "list": [
+      {
+        "id": "factory",
+        "workspace": "/root/agents/factory",
+        "tools": { "profile": "full" },
+        "subagents": {
+          "allowAgents": ["pm", "architect", "dev", "reviewer", "tester", "deployer"]
+        }
+      },
+      { "id": "pm", "workspace": "/root/agents/pm", "tools": { "profile": "full" } },
+      { "id": "architect", "workspace": "/root/agents/architect", "tools": { "profile": "full" } },
+      { "id": "dev", "workspace": "/root/agents/dev", "tools": { "profile": "coding" } },
+      { "id": "reviewer", "workspace": "/root/agents/reviewer", "tools": { "profile": "coding" } },
+      { "id": "tester", "workspace": "/root/agents/tester", "tools": { "profile": "coding" } },
+      { "id": "deployer", "workspace": "/root/agents/deployer", "tools": { "profile": "full" } }
+    ]
+  },
+  "skills": {
+    "load": {
+      "watch": true
+    }
+  }
+}

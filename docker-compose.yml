@@ -1,12 +1,48 @@
 services:
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:latest
+    entrypoint: ["/bin/sh", "-c", "cp /seed-config/openclaw.json /root/.openclaw/openclaw.json 2>/dev/null; exec openclaw gateway --bind lan --allow-unconfigured"]
+    user: root
+    ports:
+      - "18789:18789"
+    volumes:
+      - openclaw-data:/root/.openclaw
+      - ./openclaw-config.json:/seed-config/openclaw.json:ro
+      - ./openclaw-factory/hooks:/root/.openclaw/hooks:ro
+      - ./memory:/root/memory
+    environment:
+      - DASHBOARD_URL=http://factory:8000
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+    tmpfs:
+      - /tmp:size=1G
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+
   factory:
     build: .
     ports:
       - "8000:8000"
     volumes:
       - ./memory:/app/memory
-      - ./.claude:/app/.claude
       - ./audit:/app/audit
-      - ./workspace:/app/workspace
     env_file:
       - .env
+    environment:
+      - OPENCLAW_BASE_URL=http://openclaw:18789
+      - OPENCLAW_HOOK_TOKEN=factory-webhook-secret
+    depends_on:
+      - openclaw
+
+volumes:
+  openclaw-data:

@@ -1,0 +1,59 @@
+services:
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:2026.4.2
+    entrypoint: ["/bin/sh", "-c", "cp /seed-config/openclaw.json /root/.openclaw/openclaw.json 2>/dev/null; echo '{\"version\":1,\"defaults\":{\"security\":\"full\",\"ask\":\"off\",\"askFallback\":\"full\"}}' > /root/.openclaw/exec-approvals.json 2>/dev/null; exec openclaw gateway --bind lan --allow-unconfigured"]
+    user: root
+    ports:
+      - "18789:18789"
+    volumes:
+      - openclaw-data:/root/.openclaw
+      - ./openclaw-config.json:/seed-config/openclaw.json:ro
+      - ./agents:/root/agents
+      - ./hooks:/root/.openclaw/hooks
+      - ./memory:/root/memory
+    env_file:
+      - ../.env
+    environment:
+      - GITHUB_ORG=varsitytutors
+      # In full-stack mode (both services), use http://dashboard:8000
+      # In dev mode (only openclaw + local npm run dev), host.docker.internal reaches the host
+      - DASHBOARD_URL=http://host.docker.internal:8000
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+    tmpfs:
+      - /tmp:size=1G
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+
+  dashboard:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./memory:/app/memory
+      - dashboard-data:/app/data
+    env_file:
+      - ../.env
+    environment:
+      - OPENCLAW_BASE_URL=http://openclaw:18789
+      - OPENCLAW_HOOK_TOKEN=factory-webhook-secret
+      - MEMORY_DIR=/app/memory
+      - PORT=8000
+      - DEVICE_TOKEN_PATH=/app/data/.openclaw-device-token
+    depends_on:
+      - openclaw
+    restart: unless-stopped
+
+volumes:
+  openclaw-data:
+  dashboard-data:

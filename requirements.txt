@@ -1,9 +1,9 @@
 fastapi
 uvicorn[standard]
-langgraph
-langgraph-checkpoint-sqlite
-langsmith
-claude-agent-sdk
 httpx
 python-dotenv
+sse-starlette
+jinja2
+python-multipart
+sqlmodel
 aiosqlite

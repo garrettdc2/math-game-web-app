@@ -1,126 +1,59 @@
 # Minimum Viable Factory
 
-Ticket in, deployed web app out. The full SDLC — spec, architecture, code, review, tests, deploy — handled by Claude Code agents running in parallel. You approve at three gates.
+Task in, deployed web app out. The full SDLC — spec, architecture, code, review, tests, deploy — handled by Claude Code agents running in parallel. You approve at three gates via the OpenClaw dashboard.
 
-**~700 lines of Python across 16 modules. 6 skills. 5 MCPs. You can read every file in one sitting.**
+**~500 lines of Python across 12 modules. 6 skills. 3 MCPs. You can read every file in one sitting.**
 
-Right now this factory greenfields web apps from idea to production. You describe what you want, agents build and deploy it from scratch. Each app gets its own GitHub repo. Large tasks are automatically decomposed into subtasks and built in parallel. Brownfield support (existing codebases, new features, bug fixes) is next.
-
-## The 11 Primitives Every Software Factory Needs
-
-We tried to figure out the smallest set of building blocks that turns a ticket into a deployed app. Every factory needs these — the specific tools are up to you:
-
-| # | Primitive | What It Does | This Factory Uses |
-|---|---|---|---|
-| 1 | **Record** | Where work gets tracked | Linear (project: "software factory") |
-| 2 | **Memory** | How agents share context | `memory/` — one markdown file per ticket, append-only |
-| 3 | **Orchestrator** | What decides who runs next | LangGraph state machine in `orchestrator/` |
-| 4 | **Execution Env** | Where agents actually run | Docker container |
-| 5 | **Agent Runtime** | The brain behind each agent | Claude Code via `claude-agent-sdk` |
-| 6 | **Integration Layer** | How agents talk to external tools | 5 MCPs: Linear, GitHub, Vercel, Supabase, Slack |
-| 7 | **Quality Gates** | Where humans stay in the loop | LangGraph `interrupt()` + Slack notifications |
-| 8 | **Delivery Target** | Where the app gets deployed | Vercel (frontend) + Supabase (database via Vercel Marketplace) |
-| 9 | **Observability** | How you see what's happening | LangSmith traces + Linear sub-issue tracking |
-| 10 | **Skills** | What each agent knows how to do | `.claude/skills/` — 6 markdown files |
-| 11 | **Identity & Secrets** | How agents authenticate | `.env` file mounted into Docker |
-
-Swap any of these out. Use Jira instead of Linear. Deploy to Railway instead of Vercel. The primitives are the pattern. The tools are interchangeable.
+Right now this factory greenfields web apps from idea to production. You describe what you want, agents build and deploy it from scratch. Each app gets its own GitHub repo. Large tasks are automatically decomposed into subtasks and built in parallel.
 
 ## How It Works
 
 ```
-Ticket created in Linear
+Start pipeline via dashboard or API
         |
-Webhook fires --> orchestrator/api.py
-        |
-Create GitHub repo for the app
-        |
-Create 6 stage sub-issues in Linear (one per agent)
+Create GitHub repo + Netlify site + Supabase project
         |
 PM Agent writes spec --> memory file
-        |   🟢 Spec sub-issue checked off
         |
-[GATE 1] 🟡 Waiting: "Move to In Arch to approve."
-        |   🟢 Approved (or 🔴 Blocked)
+[GATE 1] 🟡 Approve in OpenClaw dashboard
+        |   🟢 Approved (with optional feedback)
         |
 Architect Agent writes technical plan + subtasks
-        |   🟢 Architecture sub-issue checked off
         |
-[GATE 2] 🟡 Waiting: "Move to In Dev to approve."
-        |   🟢 Approved (or 🔴 Blocked)
+[GATE 2] 🟡 Approve in OpenClaw dashboard
+        |   🟢 Approved (with optional feedback)
         |
 Decompose: parse subtasks from architecture
         |
 N × Dev Agents run in parallel (one per subtask, same branch)
-        |   🟢 Progress posted per subtask
         |
 Single PR opened with all changes
-        |   🟢 Implementation sub-issue checked off
         |
 Review Agent + Test Agent run in parallel
-        |   🟢 Code Review + Tests sub-issues checked off
         |
-[GATE 3] 🟡 Waiting: "Move to In Deploy to approve."
-        |   🟢 Approved (or 🔴 Blocked)
+[GATE 3] 🟡 Approve in OpenClaw dashboard
+        |   🟢 Approved (with optional feedback)
         |
-Deploy Agent ships to Vercel + Supabase
-        |   🟢 Deploy sub-issue checked off
+Deploy Agent ships to Netlify + Supabase
         |
-🟢 Done — final summary posted with repo link + deploy URL
+🟢 Done — deployed app live
 ```
 
-Each agent is a Claude Code session running inside Docker. It reads the full memory file, follows its skill instructions, appends its output, and moves on. No agent-to-agent chatter. The memory file is the only shared state.
-
-## Linear as a Dashboard
-
-When a pipeline starts, the orchestrator:
-
-1. Creates a new GitHub repo for the app
-2. Creates 6 sub-issues under the parent ticket — one per agent stage
-3. Posts a checklist comment on the parent ticket
-
-As the pipeline runs, every event is posted to the Linear issue:
-
-| Event | Comment |
-|-------|---------|
-| Pipeline start | ⚪ Pipeline started + stage checklist |
-| Repo created | ⚪ Repository link |
-| Agent starts | 🟡 "Spec — agent started" |
-| Agent finishes | 🟢 "Spec — complete" + output excerpt |
-| Gate waiting | 🟡 "Gate 1 — waiting for approval" |
-| Gate approved | 🟢 "Gate 1 — approved" |
-| Gate rejected | 🔴 "Gate 1 — rejected" |
-| Subtask done | 🟢 "Subtask 2/5 done: Auth setup" |
-| Error/timeout | 🔴 Error details + blocked reason |
-| Pipeline done | 🟢 Final summary with repo + deploy URL |
-
-Sub-issues are checked off as each agent completes. The parent issue becomes a complete record of the journey from idea to deployment.
-
-## LangSmith Tracing
-
-Every external call is traced as a nested span under the pipeline run:
-
-- Linear GraphQL calls, sub-issue lifecycle
-- Slack webhook posts
-- Memory file reads and writes
-- Each agent session, each parallel subtask
-- Gate decisions, pipeline start/resume
-- Webhook processing
+Each agent is a Claude Code session. It reads the full memory file, follows its skill instructions, appends its output, and moves on. No agent-to-agent chatter. The memory file is the only shared state.
 
 ## Try It
 
 ### What you need
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [ngrok](https://ngrok.com/) (or any tunnel to expose port 8000)
-- API keys for [Anthropic](https://console.anthropic.com/), [Linear](https://linear.app/), [GitHub](https://github.com/), [Vercel](https://vercel.com/), [Supabase](https://supabase.com/), [Slack](https://api.slack.com/)
+- [Docker](https://docs.docker.com/get-docker/) (or Python 3.12+ and Node.js 22.16+)
+- API keys for [Anthropic](https://console.anthropic.com/), [GitHub](https://github.com/), [Netlify](https://www.netlify.com/), [Supabase](https://supabase.com/)
 - [LangSmith](https://smith.langchain.com/) (optional, for tracing)
 
 ### 1. Clone and add your keys
 
 ```bash
-git clone https://github.com/ashtilawat/minimum-viable-factory.git
-cd minimum-viable-factory
+git clone https://github.com/varsitytutors/nerdy-software-factory.git
+cd nerdy-software-factory
 cp .env.example .env
 ```
 
@@ -128,70 +61,99 @@ Fill in `.env`:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
-LINEAR_API_KEY=lin_api_...
-LINEAR_WEBHOOK_SECRET=...
 GITHUB_TOKEN=ghp_...
 GITHUB_ORG=your-org-or-username
-VERCEL_TOKEN=...
+NETLIFY_TOKEN=...
+NETLIFY_TEAM_SLUG=your-netlify-team
 SUPABASE_TOKEN=...
-SLACK_TOKEN=xoxb-...
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
 LANGCHAIN_API_KEY=lsv2_...          # optional
 LANGCHAIN_PROJECT=your-project-name  # optional
 LANGCHAIN_TRACING_V2=true            # optional
 ```
 
-### 2. Set up Linear
+### 2. Start the factory
 
-Create these workflow states in your team settings (exact names matter):
-
-```
-Backlog --> In Spec --> In Arch --> In Dev --> In QA --> In Deploy --> Done --> Blocked
-```
-
-Create a project called **software factory** — all factory issues will live here.
-
-Turn off all **Pull request automations** — the orchestrator handles state transitions.
-
-### 3. Connect the webhook
+**With Docker (recommended):**
 
 ```bash
-ngrok http 8000
+docker compose up --build
 ```
 
-In Linear: **Settings > API > Webhooks > New webhook**
-- URL: `https://your-ngrok-url.ngrok-free.app/webhook/linear`
-- Resource types: Issues only
+This starts both the factory server (:8000) and the OpenClaw gateway + dashboard (:18789).
 
-Copy the signing secret to `LINEAR_WEBHOOK_SECRET` in `.env`.
-
-### 4. Set up Slack
-
-Create an app at [api.slack.com/apps](https://api.slack.com/apps):
-- Bot scopes: `chat:write`, `channels:read`
-- Install to workspace, grab the bot token (`xoxb-...`) for `SLACK_TOKEN`
-- Enable Incoming Webhooks, add one to your channel for `SLACK_WEBHOOK_URL`
-- Invite the bot: `/invite @YourAppName`
-
-### 5. Start the factory
+**Local development:**
 
 ```bash
-docker compose build
-docker compose up
+pip install -r requirements.txt
+npm install -g openclaw@latest
+make start
 ```
+
+Verify:
 
 ```bash
 curl http://localhost:8000/health
 # {"status":"ok"}
 ```
 
-### 6. Create a ticket and watch it run
+Open the OpenClaw dashboard at **http://localhost:18789**.
 
-Write a Linear ticket describing what you want built. Move it to **In Spec**.
+### 3. Start a pipeline
 
-The factory creates a GitHub repo, then the PM Agent writes a spec. You get a Slack message at Gate 1. Move to **In Arch**. The Architect plans the implementation and breaks it into subtasks. Move to **In Dev**. Parallel Dev Agents build each subtask — progress is posted to the Linear issue. When all subtasks land, a single PR is opened. Review and test agents run on the combined PR. Move to **In Deploy**. The app deploys to Vercel (frontend) and Supabase (database, provisioned automatically via Vercel Marketplace). Done.
+```bash
+curl -X POST http://localhost:8000/pipeline/start \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": "TASK-1", "title": "Build a todo app"}'
+```
 
-Every step is logged to the Linear issue. Open it to see the full journey.
+The factory creates a GitHub repo, Netlify site, and Supabase project, then the PM Agent writes a spec.
+
+### 4. Approve gates
+
+Check pending gates:
+
+```bash
+curl http://localhost:8000/gates/pending
+```
+
+Approve with optional feedback:
+
+```bash
+curl -X POST http://localhost:8000/pipeline/approve/TASK-1/gate_1_spec_review \
+  -H "Content-Type: application/json" \
+  -d '{"approved": true, "feedback": "Looks good, but add dark mode support"}'
+```
+
+Or reject:
+
+```bash
+curl -X POST http://localhost:8000/pipeline/approve/TASK-1/gate_1_spec_review \
+  -H "Content-Type: application/json" \
+  -d '{"approved": false, "feedback": "Scope is too large, simplify"}'
+```
+
+### 5. Monitor progress
+
+```bash
+# Check pipeline status
+curl http://localhost:8000/pipeline/status/TASK-1
+
+# List all active pipelines
+curl http://localhost:8000/pipeline/list
+```
+
+## API Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| POST | `/pipeline/start` | Start a new pipeline |
+| GET | `/pipeline/status/{task_id}` | Get pipeline status |
+| GET | `/pipeline/list` | List all active pipelines |
+| POST | `/pipeline/approve/{task_id}/{gate_name}` | Approve or reject a gate |
+| GET | `/gates/pending` | List gates waiting for approval |
+
+**Gate names:** `gate_1_spec_review`, `gate_2_arch_review`, `gate_3_qa_review`
 
 ## What's Inside
 
@@ -199,27 +161,24 @@ Every step is logged to the Linear issue. Open it to see the full journey.
 orchestrator/
   __init__.py                # Exports FastAPI app
   config.py                  # Env vars, paths, constants
-  state.py                   # LangGraph state schema + Linear state map
+  state.py                   # Pipeline state dataclass
   audit.py                   # Append-only audit logging
-  memory.py                  # Memory file init and append
-  linear.py                  # Linear GraphQL API + sub-issue lifecycle
-  slack.py                   # Slack webhook posts
+  memory.py                  # Memory file init, read, append
+  gates.py                   # asyncio.Event-based approval gates
   agent_runner.py            # Core agent runner (claude-agent-sdk)
-  graph.py                   # LangGraph DAG construction
-  pipeline.py                # Pipeline start/resume + repo creation
-  api.py                     # FastAPI endpoints
+  pipeline.py                # Sequential pipeline runner
+  api.py                     # FastAPI REST endpoints
   nodes/
     __init__.py              # Re-exports all node functions
     agents.py                # PM, Architect, Review, Test, Deploy nodes
     dev.py                   # Decompose + parallel dev execution
-    gates.py                 # Human approval gates (interrupt/resume)
     terminal.py              # Done and blocked handlers
 memory/
-  _template.md               # Bootstrapped for each new ticket
-  LIN-xxx.md                 # One file per ticket, append-only
+  _template.md               # Bootstrapped for each new task
+  {task-id}.md               # One file per task, append-only
 .claude/
   CLAUDE.md                  # Master context for all agent sessions
-  settings.json              # MCP server configuration
+  settings.json              # MCP server configuration (GitHub, Netlify, Supabase)
   skills/
     spec-writing/SKILL.md    # How to write a spec
     architecture/SKILL.md    # How to plan implementation
@@ -230,9 +189,10 @@ memory/
 audit/
   YYYY-MM-DD.log             # Every factory event, append-only
 workspace/
-  LIN-xxx/                   # Cloned app repo per ticket (gitignored)
+  {task-id}/                 # Cloned app repo per task (gitignored)
 Dockerfile
 docker-compose.yml
+Makefile
 ```
 
 ## License
