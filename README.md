@@ -1,10 +1,8 @@
-# Minimum Viable Factory
+# Nerdy Software Factory
 
-Task in, deployed web app out. The full SDLC — spec, architecture, code, review, tests, deploy — handled by Claude Code agents running in parallel. You approve at three gates via the OpenClaw dashboard.
+Task in, deployed web app out. The full SDLC — spec, architecture, code, review, tests, deploy — handled by Claude Code agents orchestrated through [OpenClaw](https://openclaw.com). You approve at three human gates via the dashboard.
 
-**~500 lines of Python across 12 modules. 6 skills. 3 MCPs. You can read every file in one sitting.**
-
-Right now this factory greenfields web apps from idea to production. You describe what you want, agents build and deploy it from scratch. Each app gets its own GitHub repo. Large tasks are automatically decomposed into subtasks and built in parallel.
+**TypeScript end-to-end. Hono server, React 19 dashboard, Drizzle + SQLite persistence, WebSocket link to the OpenClaw gateway. 7 agents. 6 skills. 3 MCPs.**
 
 ## How It Works
 
@@ -15,45 +13,97 @@ Create GitHub repo + Netlify site + Supabase project
         |
 PM Agent writes spec --> memory file
         |
-[GATE 1] 🟡 Approve in OpenClaw dashboard
-        |   🟢 Approved (with optional feedback)
+[GATE 1] Approve spec
         |
 Architect Agent writes technical plan + subtasks
         |
-[GATE 2] 🟡 Approve in OpenClaw dashboard
-        |   🟢 Approved (with optional feedback)
+[GATE 2] Approve architecture
         |
-Decompose: parse subtasks from architecture
-        |
-N × Dev Agents run in parallel (one per subtask, same branch)
+N x Dev Agents run in parallel (one per subtask, same branch)
         |
 Single PR opened with all changes
         |
 Review Agent + Test Agent run in parallel
         |
-[GATE 3] 🟡 Approve in OpenClaw dashboard
-        |   🟢 Approved (with optional feedback)
+[GATE 3] Approve code quality
         |
 Deploy Agent ships to Netlify + Supabase
         |
-🟢 Done — deployed app live
+Done -- deployed app live
 ```
 
-Each agent is a Claude Code session. It reads the full memory file, follows its skill instructions, appends its output, and moves on. No agent-to-agent chatter. The memory file is the only shared state.
+Each agent is a Claude Code session running inside the OpenClaw gateway. Agents read a shared append-only memory file, follow their skill instructions, and write their output back. No agent-to-agent chatter — the memory file is the only shared state.
+
+## Architecture
+
+```
+openclaw-factory/
+  server/                      # Hono HTTP + WebSocket server
+    index.ts                   # Entry point, marker parsing, SSE bus
+    db/schema.ts               # Drizzle ORM schemas (pipelines, events)
+    lib/
+      gateway-client.ts        # WebSocket client to OpenClaw gateway
+      store.ts                 # SQLite persistence (pipelines)
+      event-store.ts           # Event persistence + deduplication
+      registry.ts              # In-memory pipeline state
+      openclaw.ts              # OpenClaw RPC/HTTP API
+      memory.ts                # Memory file management
+      audit.ts                 # Append-only audit logging
+      config.ts                # Config from env vars
+      device-token.ts          # Gateway device token
+    routes/
+      pipeline.ts              # Pipeline CRUD + gate approval
+      events.ts                # SSE streaming + event ingest webhook
+      health.ts                # Health check
+  src/                         # React 19 + Vite frontend
+    pages/
+      dashboard.tsx            # Pipeline list, filters, pending gates
+      pipeline.tsx             # Single pipeline detail + approval
+      new-pipeline.tsx         # Start a new pipeline
+    hooks/
+      use-sse.ts               # SSE with reconnect + deduplication
+      use-pipelines.ts         # Real-time pipeline state
+    components/                # Gate panel, stage stepper, memory viewer, etc.
+  agents/                      # OpenClaw agent workspaces
+    factory/                   # Orchestrator agent
+    pm/                        # Product Manager
+    architect/                 # Technical Architect
+    dev/                       # Developer (N parallel)
+    reviewer/                  # Code Reviewer
+    tester/                    # Test Writer
+    deployer/                  # Deploy + Verify
+  hooks/
+    dashboard-bridge/          # Parses [STAGE:...] markers -> POST /events/ingest
+    jira-trigger/              # Jira webhook -> pipeline start
+  openclaw-config.json         # Gateway, agent, tool, hook config
+  docker-compose.yml           # OpenClaw gateway + dashboard
+  package.json                 # Dependencies
+```
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Server | Node.js + [Hono](https://hono.dev) |
+| Database | SQLite via [Drizzle ORM](https://orm.drizzle.team) + better-sqlite3 |
+| Frontend | React 19 + [Vite](https://vite.dev) + Tailwind CSS 4 |
+| Agent orchestration | [OpenClaw](https://openclaw.com) gateway (WebSocket) |
+| Real-time | Server-Sent Events (SSE) with Last-Event-ID catchup |
+| AI | Claude Code via Anthropic API |
+| Deploy targets | GitHub + Netlify + Supabase |
 
 ## Try It
 
-### What you need
+### Prerequisites
 
-- [Docker](https://docs.docker.com/get-docker/) (or Python 3.12+ and Node.js 22.16+)
+- [Docker](https://docs.docker.com/get-docker/)
 - API keys for [Anthropic](https://console.anthropic.com/), [GitHub](https://github.com/), [Netlify](https://www.netlify.com/), [Supabase](https://supabase.com/)
-- [LangSmith](https://smith.langchain.com/) (optional, for tracing)
 
-### 1. Clone and add your keys
+### 1. Clone and configure
 
 ```bash
-git clone https://github.com/varsitytutors/nerdy-software-factory.git
-cd nerdy-software-factory
+git clone https://github.com/varsitytutors/nerdy-software-factory-ai-day.git
+cd nerdy-software-factory-ai-day
 cp .env.example .env
 ```
 
@@ -62,13 +112,12 @@ Fill in `.env`:
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 GITHUB_TOKEN=ghp_...
-GITHUB_ORG=your-org-or-username
+GITHUB_ORG=your-org
 NETLIFY_TOKEN=...
-NETLIFY_TEAM_SLUG=your-netlify-team
+NETLIFY_TEAM_SLUG=your-team
 SUPABASE_TOKEN=...
-LANGCHAIN_API_KEY=lsv2_...          # optional
-LANGCHAIN_PROJECT=your-project-name  # optional
-LANGCHAIN_TRACING_V2=true            # optional
+OPENCLAW_BASE_URL=http://localhost:18789
+OPENCLAW_HOOK_TOKEN=factory-webhook-secret
 ```
 
 ### 2. Start the factory
@@ -76,124 +125,106 @@ LANGCHAIN_TRACING_V2=true            # optional
 **With Docker (recommended):**
 
 ```bash
+cd openclaw-factory
 docker compose up --build
 ```
 
-This starts both the factory server (:8000) and the OpenClaw gateway + dashboard (:18789).
+This starts the OpenClaw gateway (:18789) and the dashboard server (:8000).
 
 **Local development:**
 
 ```bash
-pip install -r requirements.txt
-npm install -g openclaw@latest
-make start
+cd openclaw-factory
+npm install
+npm run dev
 ```
+
+The Hono server starts on :3001 and the Vite dev server on :5173 (with proxy to the API).
 
 Verify:
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8000/api/health
 # {"status":"ok"}
 ```
-
-Open the OpenClaw dashboard at **http://localhost:18789**.
 
 ### 3. Start a pipeline
 
 ```bash
-curl -X POST http://localhost:8000/pipeline/start \
+curl -X POST http://localhost:8000/api/pipeline/start \
   -H "Content-Type: application/json" \
   -d '{"task_id": "TASK-1", "title": "Build a todo app"}'
 ```
 
-The factory creates a GitHub repo, Netlify site, and Supabase project, then the PM Agent writes a spec.
+Or use the dashboard at **http://localhost:8000** and click "New Pipeline".
 
 ### 4. Approve gates
 
-Check pending gates:
+Gates appear in the dashboard with approve/reject buttons. Or use the API:
 
 ```bash
-curl http://localhost:8000/gates/pending
-```
+# Check pending gates
+curl http://localhost:8000/api/gates/pending
 
-Approve with optional feedback:
-
-```bash
-curl -X POST http://localhost:8000/pipeline/approve/TASK-1/gate_1_spec_review \
+# Approve with feedback
+curl -X POST http://localhost:8000/api/pipeline/approve/TASK-1/gate_1_spec_review \
   -H "Content-Type: application/json" \
-  -d '{"approved": true, "feedback": "Looks good, but add dark mode support"}'
-```
+  -d '{"approved": true, "feedback": "Add dark mode support"}'
 
-Or reject:
-
-```bash
-curl -X POST http://localhost:8000/pipeline/approve/TASK-1/gate_1_spec_review \
+# Reject
+curl -X POST http://localhost:8000/api/pipeline/approve/TASK-1/gate_1_spec_review \
   -H "Content-Type: application/json" \
-  -d '{"approved": false, "feedback": "Scope is too large, simplify"}'
+  -d '{"approved": false, "feedback": "Scope is too large"}'
 ```
 
 ### 5. Monitor progress
 
-```bash
-# Check pipeline status
-curl http://localhost:8000/pipeline/status/TASK-1
+The dashboard shows real-time pipeline progress via SSE. Or use the API:
 
-# List all active pipelines
-curl http://localhost:8000/pipeline/list
+```bash
+curl http://localhost:8000/api/pipeline/status/TASK-1
+curl http://localhost:8000/api/pipeline/list
 ```
 
 ## API Reference
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/health` | Health check |
-| POST | `/pipeline/start` | Start a new pipeline |
-| GET | `/pipeline/status/{task_id}` | Get pipeline status |
-| GET | `/pipeline/list` | List all active pipelines |
-| POST | `/pipeline/approve/{task_id}/{gate_name}` | Approve or reject a gate |
-| GET | `/gates/pending` | List gates waiting for approval |
+| GET | `/api/health` | Health check |
+| POST | `/api/pipeline/start` | Start a new pipeline |
+| GET | `/api/pipeline/status/{task_id}` | Get pipeline status |
+| GET | `/api/pipeline/list` | List all pipelines |
+| POST | `/api/pipeline/approve/{task_id}/{gate_name}` | Approve or reject a gate |
+| GET | `/api/gates/pending` | List gates awaiting approval |
+| POST | `/api/pipeline/{task_id}/abort` | Abort a running pipeline |
+| POST | `/api/pipeline/{task_id}/retry/{stage}` | Retry from a specific stage |
+| GET | `/api/events/stream` | SSE event stream (supports Last-Event-ID) |
+| GET | `/api/events/history` | Query event history |
+| GET | `/api/gateway/status` | OpenClaw gateway connection status |
+| POST | `/api/events/ingest` | Webhook for dashboard-bridge hook |
 
 **Gate names:** `gate_1_spec_review`, `gate_2_arch_review`, `gate_3_qa_review`
 
-## What's Inside
+## Agents
 
-```
-orchestrator/
-  __init__.py                # Exports FastAPI app
-  config.py                  # Env vars, paths, constants
-  state.py                   # Pipeline state dataclass
-  audit.py                   # Append-only audit logging
-  memory.py                  # Memory file init, read, append
-  gates.py                   # asyncio.Event-based approval gates
-  agent_runner.py            # Core agent runner (claude-agent-sdk)
-  pipeline.py                # Sequential pipeline runner
-  api.py                     # FastAPI REST endpoints
-  nodes/
-    __init__.py              # Re-exports all node functions
-    agents.py                # PM, Architect, Review, Test, Deploy nodes
-    dev.py                   # Decompose + parallel dev execution
-    terminal.py              # Done and blocked handlers
-memory/
-  _template.md               # Bootstrapped for each new task
-  {task-id}.md               # One file per task, append-only
-.claude/
-  CLAUDE.md                  # Master context for all agent sessions
-  settings.json              # MCP server configuration (GitHub, Netlify, Supabase)
-  skills/
-    spec-writing/SKILL.md    # How to write a spec
-    architecture/SKILL.md    # How to plan implementation
-    coding/SKILL.md          # How to write code and open a PR
-    code-review/SKILL.md     # How to review a PR
-    test-writing/SKILL.md    # How to write and run tests
-    deploy-checklist/SKILL.md # How to deploy and verify
-audit/
-  YYYY-MM-DD.log             # Every factory event, append-only
-workspace/
-  {task-id}/                 # Cloned app repo per task (gitignored)
-Dockerfile
-docker-compose.yml
-Makefile
-```
+| Agent | Skill | Role |
+|-------|-------|------|
+| Factory | `run-pipeline` | Orchestrator — spawns and sequences all other agents |
+| PM | `spec-writing` | Writes structured specs from task descriptions |
+| Architect | `architecture` | Produces technical plans, decomposes into subtasks |
+| Dev | `coding` | Implements code, commits to branch, opens PR (N parallel) |
+| Reviewer | `code-review` | Reviews PR for correctness, security, conventions |
+| Tester | `test-writing` | Writes and runs tests against the PR |
+| Deployer | `deploy-checklist` | Deploys to Netlify + Supabase, verifies health |
+
+## Connection Resilience
+
+The factory is built for reliable event delivery between the OpenClaw gateway and the dashboard:
+
+- **Server-side**: WebSocket client with exponential backoff reconnection (1s to 30s, 10 attempts)
+- **Client-side**: SSE with `Last-Event-ID` header for automatic catchup on reconnect
+- **Deduplication**: Events keyed by SHA-256 idempotency hash, deduplicated at both server and client
+- **Persistence**: All events stored in SQLite for recovery after restarts
 
 ## License
 
