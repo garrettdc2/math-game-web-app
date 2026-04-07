@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { existsSync, readFileSync, readdirSync } from "fs";
+import { existsSync, readFileSync, readdirSync, unlinkSync } from "fs";
 import { resolve } from "path";
 import { registry } from "../lib/registry.js";
 import * as openclaw from "../lib/openclaw.js";
@@ -8,7 +8,8 @@ import { auditLog } from "../lib/audit.js";
 import { initMemory } from "../lib/memory.js";
 import { persistAndPublish } from "./events.js";
 import { pipelineToDict, type PipelineState } from "../db/schema.js";
-import { MEMORY_DIR, AUDIT_DIR } from "../lib/config.js";
+import { MEMORY_DIR, AUDIT_DIR, detectServiceModes } from "../lib/config.js";
+import { getHealth } from "../lib/local-deploy.js";
 
 const pipeline = new Hono();
 
@@ -32,7 +33,17 @@ pipeline.post("/pipeline/start", async (c) => {
     started_at: Date.now() / 1000,
     has_pending_gate: false,
     openclaw_session_key: "",
+    deploy_url: "",
+    deploy_mode: "",
   };
+
+  // In local git mode, set the workspace path to where agents will write code
+  // (inside the OpenClaw container — agents create the workspace themselves)
+  const modes = detectServiceModes();
+  if (modes.git === "local") {
+    state.workspace_path = `/root/workspace/${task_id}`;
+    state.repo_name = task_id;
+  }
 
   initMemory(task_id, title);
   registry.register(state);
@@ -106,7 +117,14 @@ pipeline.get("/pipeline/status/:taskId", (c) => {
 
 // GET /pipeline/list
 pipeline.get("/pipeline/list", (c) => {
-  return c.json({ pipelines: registry.allPipelines() });
+  const pipelines = registry.allPipelines();
+  // Enrich with deploy health
+  const enriched: Record<string, Record<string, unknown>> = {};
+  for (const [taskId, dict] of Object.entries(pipelines)) {
+    const health = dict.deploy_mode === "local" ? getHealth(taskId) : null;
+    enriched[taskId] = { ...dict, deploy_health: health?.health ?? null };
+  }
+  return c.json({ pipelines: enriched });
 });
 
 // GET /gates/pending
@@ -127,6 +145,17 @@ pipeline.post("/pipeline/:taskId/abort", async (c) => {
       await openclaw.sendAbort(state.openclaw_session_key, taskId);
     } catch (err) {
       console.error(`[pipeline] Failed to send abort: ${err}`);
+    }
+  }
+
+  // Stop local deploy if active
+  if (state.deploy_mode === "local") {
+    const manifestPath = resolve("deploys", `${taskId}.json`);
+    if (existsSync(manifestPath)) {
+      try {
+        unlinkSync(manifestPath);
+        console.log(`[pipeline] Abort: removed deploy manifest for ${taskId}`);
+      } catch { /* ignore */ }
     }
   }
 
@@ -193,6 +222,11 @@ pipeline.get("/pipeline/:taskId/logs", (c) => {
 
   logs.reverse();
   return c.json({ logs });
+});
+
+// GET /service-modes
+pipeline.get("/service-modes", (c) => {
+  return c.json(detectServiceModes());
 });
 
 export default pipeline;

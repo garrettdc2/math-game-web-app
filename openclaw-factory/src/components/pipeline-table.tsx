@@ -86,7 +86,10 @@ export function PipelineTable({ pipelines }: PipelineTableProps) {
       </table>
       {pipelines.length > 0 && (
         <div className="px-4 py-3 border-t border-outline-ghost">
-          <button className="text-sm text-primary hover:text-primary-dim transition-colors">
+          <button
+            className="text-sm text-primary hover:text-primary-dim transition-colors cursor-pointer"
+            onClick={() => navigate("/pipelines")}
+          >
             View all {pipelines.length} pipelines →
           </button>
         </div>

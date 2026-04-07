@@ -89,6 +89,23 @@ function pendingGates(): Array<{ task_id: string; gate_name: string }> {
   return [..._pendingGates.values()];
 }
 
+function updateDeployUrl(
+  taskId: string,
+  url: string,
+  mode: string
+): void {
+  const state = _pipelines.get(taskId);
+  if (!state) {
+    console.warn(`[registry] updateDeployUrl: unknown task_id ${taskId}`);
+    return;
+  }
+  state.deploy_url = url;
+  state.deploy_mode = mode;
+  savePipeline(state);
+  persistAndPublish("pipeline:update", pipelineToDict(state));
+  console.log(`[registry] ${taskId} deploy: ${mode} → ${url}`);
+}
+
 export const registry = {
   hydrate,
   getPipeline,
@@ -99,4 +116,5 @@ export const registry = {
   addPendingGate,
   removePendingGate,
   pendingGates,
+  updateDeployUrl,
 };

@@ -20,3 +20,30 @@ export const OPENCLAW_API_TOKEN =
 
 export const GITHUB_ORG = process.env.GITHUB_ORG || "varsitytutors";
 export const AGENT_TIMEOUT = 1800;
+
+// ---------------------------------------------------------------------------
+// Service Mode Detection — local fallback when cloud tokens are missing
+// ---------------------------------------------------------------------------
+
+export interface ServiceModes {
+  git: "local" | "cloud";
+  deploy: "local" | "cloud";
+  database: "local" | "cloud";
+}
+
+export function detectServiceModes(): ServiceModes {
+  const modes: ServiceModes = {
+    git: process.env.GITHUB_TOKEN ? "cloud" : "local",
+    deploy: process.env.NETLIFY_TOKEN ? "cloud" : "local",
+    database: process.env.SUPABASE_TOKEN ? "cloud" : "local",
+  };
+  return modes;
+}
+
+export function logServiceModes(): void {
+  const modes = detectServiceModes();
+  console.log(`[config] Service modes:`);
+  console.log(`[config]   git:      ${modes.git}${modes.git === "local" ? " (no GITHUB_TOKEN)" : ""}`);
+  console.log(`[config]   deploy:   ${modes.deploy}${modes.deploy === "local" ? " (no NETLIFY_TOKEN)" : ""}`);
+  console.log(`[config]   database: ${modes.database}${modes.database === "local" ? " (no SUPABASE_TOKEN)" : ""}`);
+}

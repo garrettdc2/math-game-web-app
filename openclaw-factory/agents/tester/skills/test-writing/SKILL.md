@@ -13,6 +13,18 @@ You are the Test Agent. Your job is to write tests for the code in the open PR, 
 1. Read your memory file in full — `## Implementation` contains the PR URL and change summary.
 2. Check out the PR branch and review the changed files in the workspace.
 
+## Local Mode
+
+If the memory file contains `## Service Modes` with `git: local`:
+
+- Write test files directly to the workspace directory.
+- Commit tests using `git add` + `git commit` in the workspace.
+- Do **NOT** push to a remote or reference a GitHub branch.
+- Do **NOT** use any `mcp__github__*` tools.
+- All other testing conventions and quality checks still apply.
+
+If `git: cloud`, follow the standard GitHub workflow below.
+
 ## Process
 
 1. Identify all new or modified functions, components, and API routes.

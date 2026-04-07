@@ -7,13 +7,17 @@ import { resolve } from "path";
 import { initDb } from "./lib/store.js";
 import { registry } from "./lib/registry.js";
 import { savePipeline } from "./lib/store.js";
+import { logServiceModes } from "./lib/config.js";
+import { generateAgentSettings } from "./lib/generate-agent-settings.js";
 import { GatewayClient } from "./lib/gateway-client.js";
 import { insertEvent, generateIdempotencyKey, pruneEvents } from "./lib/event-store.js";
 import { eventBus, persistAndPublish } from "./routes/events.js";
+import { startPolling as startDeployHealthPolling } from "./lib/local-deploy.js";
 import pipelineRoutes from "./routes/pipeline.js";
 import eventRoutes from "./routes/events.js";
 import healthRoutes from "./routes/health.js";
 import analyticsRoutes from "./routes/analytics.js";
+import deployRoutes from "./routes/deploys.js";
 
 /**
  * Extract taskId from an OpenClaw sessionKey.
@@ -61,6 +65,24 @@ function processAgentOutput(content: string, sessionKey: string): void {
     const [, taskId] = match;
     console.log(`[gateway] Detected pipeline done marker: ${taskId}`);
     registry.updateStage(taskId, "done");
+
+    // Fallback: if deploy_url is still empty, scan the memory file for a local URL
+    const state = registry.getPipeline(taskId);
+    if (state && !state.deploy_url) {
+      try {
+        const memPath = resolve("memory", `${taskId}.md`);
+        if (existsSync(memPath)) {
+          const mem = readFileSync(memPath, "utf-8");
+          const urlMatch = mem.match(/\*\*URL\*\*:\s*(http:\/\/localhost:\d+)/i)
+            || mem.match(/http:\/\/localhost:(\d{4})/);
+          if (urlMatch) {
+            const url = urlMatch[0].startsWith("http") ? urlMatch[0] : `http://localhost:${urlMatch[1]}`;
+            console.log(`[gateway] Fallback: found deploy URL in memory for ${taskId}: ${url}`);
+            registry.updateDeployUrl(taskId, url, "local");
+          }
+        }
+      } catch { /* ignore */ }
+    }
   }
 
   // [PIPELINE:task-id:error:detail]
@@ -68,6 +90,20 @@ function processAgentOutput(content: string, sessionKey: string): void {
     const [, taskId, detail] = match;
     console.log(`[gateway] Detected pipeline error marker: ${taskId}`);
     registry.updateStage(taskId, "blocked", detail);
+  }
+
+  // [DEPLOY:local] or [DEPLOY:local:3001] or [DEPLOY:local:http://localhost:3001]
+  for (const match of content.matchAll(/\[DEPLOY:local(?::([^\]]+))?\]/g)) {
+    const taskId = taskIdFromSessionKey(sessionKey);
+    if (!taskId) continue;
+
+    const raw = (match[1] || "3001").trim();
+    // If the agent put a full URL, extract the port; otherwise treat as port number
+    const portMatch = raw.match(/(\d{4})/);
+    const port = portMatch ? portMatch[1] : "3001";
+    const url = `http://localhost:${port}`;
+    console.log(`[gateway] Detected local deploy marker: ${taskId} → ${url}`);
+    registry.updateDeployUrl(taskId, url, "local");
   }
 }
 
@@ -78,6 +114,7 @@ app.route("/api", pipelineRoutes);
 app.route("/api", eventRoutes);
 app.route("/api", healthRoutes);
 app.route("/api", analyticsRoutes);
+app.route("/api", deployRoutes);
 
 // Serve built SPA in production
 const clientDir = resolve("dist/client");
@@ -98,6 +135,10 @@ if (existsSync(clientDir)) {
 // Initialize and start
 initDb();
 registry.hydrate();
+logServiceModes();
+
+// Generate agent settings based on available tokens (local mode support)
+generateAgentSettings(resolve("agents"));
 
 // Initialize Gateway WebSocket client
 export const gatewayClient = new GatewayClient({
@@ -161,9 +202,41 @@ export const gatewayClient = new GatewayClient({
   },
 });
 
+// Start deploy health polling
+startDeployHealthPolling();
+
 // Prune old events on startup and daily
 pruneEvents();
 setInterval(() => pruneEvents(), 24 * 60 * 60 * 1000);
+
+// Daily workspace cleanup (7-day rule for non-served pipelines)
+import { existsSync as fsExists, rmSync, unlinkSync as fsUnlink } from "fs";
+import { getHealth as getDeployHealth } from "./lib/local-deploy.js";
+setInterval(() => {
+  const allPipelines = Object.values(registry.allPipelines());
+  const now = Date.now() / 1000;
+  const sevenDays = 7 * 24 * 60 * 60;
+
+  for (const p of allPipelines) {
+    if ((p.stage !== "done" && p.stage !== "blocked") || p.started_at <= 0) continue;
+    if (now - p.started_at < sevenDays) continue;
+
+    const health = getDeployHealth(p.task_id);
+    if (health && health.health === "live") continue;
+
+    const manifestPath = resolve("deploys", `${p.task_id}.json`);
+    if (fsExists(manifestPath)) {
+      try { fsUnlink(manifestPath); } catch { /* ignore */ }
+    }
+    const workspacePath = resolve("workspaces", p.task_id);
+    if (fsExists(workspacePath)) {
+      try {
+        rmSync(workspacePath, { recursive: true, force: true });
+        console.log(`[auto-cleanup] Removed workspace: ${p.task_id}`);
+      } catch { /* ignore */ }
+    }
+  }
+}, 24 * 60 * 60 * 1000);
 
 gatewayClient.start().catch((err) => {
   console.error(`[factory] Gateway client start error:`, err);

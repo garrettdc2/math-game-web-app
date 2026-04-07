@@ -193,6 +193,15 @@ events.post("/events/ingest", async (c) => {
       registry.updateStage(body.task_id, "done");
     } else if (body.event === "pipeline:error") {
       registry.updateStage(body.task_id, "blocked", body.detail || "Unknown error");
+    } else if (body.event === "deploy:local" || body.event === "deploy:cloud") {
+      try {
+        const detail = body.detail ? JSON.parse(body.detail) : {};
+        const url = detail.url || "";
+        const mode = detail.mode || (body.event === "deploy:local" ? "local" : "cloud");
+        registry.updateDeployUrl(body.task_id, url, mode);
+      } catch {
+        console.warn(`[events] Failed to parse deploy detail for ${body.task_id}`);
+      }
     } else {
       const { auditLog } = await import("../lib/audit.js");
       auditLog(body.task_id, body.event, body.detail || "");

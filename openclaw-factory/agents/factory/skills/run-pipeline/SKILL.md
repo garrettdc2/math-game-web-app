@@ -24,6 +24,22 @@ Extract:
 - **task_id**: e.g., `SFT-123`
 - **title**: e.g., "Build a todo app with authentication"
 
+## Service Modes
+
+Before spawning any agent, determine the factory's service modes and write them to the memory file. Check the `## Service Modes` section — if it doesn't exist yet, create it at the top of the memory file with:
+
+```
+## Service Modes
+- git: {local|cloud}
+- deploy: {local|cloud}
+- database: {local|cloud}
+- workspace: {absolute path to workspace directory, if local}
+```
+
+To detect modes: check whether `GITHUB_TOKEN`, `NETLIFY_TOKEN`, and `SUPABASE_TOKEN` environment variables are set. If a token is absent, that service is "local".
+
+**IMPORTANT**: Include the `## Service Modes` section in the `task` field of every `sessions_spawn()` call, so all downstream agents know whether to use MCP tools or local alternatives.
+
 ## Stage 1: Spec
 
 Output: `[STAGE:{task_id}:spec:start]`
@@ -145,7 +161,7 @@ Spawn the deploy agent:
 ```
 sessions_spawn({
   agentId: "deployer",
-  task: "Task {task_id}: {title}\n\nMemory:\n{memory_content}\n\nMerge the PR, deploy to Netlify + Supabase, and verify health.",
+  task: "Task {task_id}: {title}\n\nMemory:\n{memory_content}\n\nDeploy the application. Check ## Service Modes in memory — if deploy is 'local', follow the Local Mode instructions in your skill file EXACTLY: build the app, scan /root/deploys/*.json for the next free port (3001-3010, NEVER 3000), write a manifest JSON to /root/deploys/{task_id}.json, wait for the supervisor to start it, then emit [DEPLOY:local:PORT]. Do NOT start a server yourself with & — the supervisor handles it. If deploy is 'cloud', merge the PR, deploy to Netlify + Supabase, and verify health.",
   label: "{task_id}:deploy",
   runTimeoutSeconds: 900
 })

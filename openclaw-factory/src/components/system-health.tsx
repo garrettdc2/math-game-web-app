@@ -32,7 +32,7 @@ function StatusDot({ status }: { status: HealthItem["status"] }) {
 
 export function SystemHealth({ items = DEFAULT_ITEMS }: SystemHealthProps) {
   return (
-    <Card className="p-5">
+    <Card className="p-5 h-full">
       <h3 className="text-sm font-semibold text-on-surface mb-4">System Health</h3>
       <div className="space-y-3">
         {items.map((item) => (

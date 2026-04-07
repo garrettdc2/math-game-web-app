@@ -137,6 +137,23 @@ const handler = async (event: HookEvent): Promise<void> => {
     });
   }
 
+  // Detect local deploy marker: [DEPLOY:local] or [DEPLOY:local:3001] or [DEPLOY:local:http://localhost:3001]
+  const deployMatches = content.matchAll(/\[DEPLOY:local(?::([^\]]+))?\]/g);
+  for (const match of deployMatches) {
+    const raw = (match[1] || "3001").trim();
+    const portMatch = raw.match(/(\d{4})/);
+    const port = portMatch ? portMatch[1] : "3001";
+    const taskMatch = sessionKey.match(/hook:factory:([\w-]+)/);
+    if (taskMatch) {
+      await postEvent({
+        task_id: taskMatch[1],
+        event: "deploy:local",
+        detail: JSON.stringify({ url: `http://localhost:${port}`, port, mode: "local" }),
+        session_key: sessionKey,
+      });
+    }
+  }
+
   // Fallback: detect natural language patterns from factory agent
   const nlGateMatch = content.match(
     /Awaiting human approval for .+ \((gate_\d+_\w+)\)/

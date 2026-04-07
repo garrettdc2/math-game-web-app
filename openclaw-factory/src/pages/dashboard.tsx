@@ -26,11 +26,14 @@ import {
   getStageDurations,
   getFailureAnalysis,
   getEventHistory,
+  getServiceModes,
   type AnalyticsSummary,
   type ThroughputDay,
   type StageDuration,
   type FailureCategory,
   type EventRecord,
+  type ServiceModes,
+  cleanupDeploys,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -573,12 +576,36 @@ function AnalyticsView() {
 
 type DashboardTab = "pipeline" | "analytics";
 
+function ServiceModesBanner({ modes }: { modes: ServiceModes | null }) {
+  if (!modes) return null;
+  const localServices = (["git", "deploy", "database"] as const).filter(
+    (k) => modes[k] === "local"
+  );
+  if (localServices.length === 0) return null;
+
+  return (
+    <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="font-medium text-amber-600">Local Mode</span>
+        <span className="text-on-surface-variant">
+          {localServices.join(", ")} {localServices.length === 1 ? "is" : "are"} running locally
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { counts, loading, filtered } = usePipelines();
   const { connectionStatus } = useSSE();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [activeTab, setActiveTab] = useState<DashboardTab>("pipeline");
+  const [serviceModes, setServiceModes] = useState<ServiceModes | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    getServiceModes().then(setServiceModes).catch(() => {});
+  }, []);
   const pipelines = filtered(filter);
 
   // Calculate metrics
@@ -587,11 +614,17 @@ export default function DashboardPage() {
     ? ((counts.completed / totalPipelines) * 100).toFixed(1)
     : "0.0";
 
-  // Calculate throughput (pipelines per day - mock calculation)
-  const throughput = totalPipelines > 0 ? (totalPipelines / 7).toFixed(1) : "0.0";
+  // Calculate throughput from pipelines started in the last 7 days
+  const sevenDaysAgo = Date.now() / 1000 - 7 * 86400;
+  const recentCount = pipelines.filter((p) => p.started_at > sevenDaysAgo).length;
+  const throughput = recentCount > 0 ? (recentCount / 7).toFixed(1) : "0.0";
 
-  // Calculate average time (mock - would need actual timing data)
-  const avgTime = counts.completed > 0 ? "4.5" : "\u2014";
+  // Calculate average time from completed pipelines with elapsed data
+  const completedPipelines = pipelines.filter((p) => p.stage === "done" && p.elapsed > 0);
+  const avgTimeHours = completedPipelines.length > 0
+    ? (completedPipelines.reduce((sum, p) => sum + p.elapsed, 0) / completedPipelines.length / 3600)
+    : 0;
+  const avgTime = avgTimeHours > 0 ? avgTimeHours.toFixed(1) : "\u2014";
 
   // Compute real chart data from pipelines for Pipeline tab ThroughputChart
   const chartData = useMemo(() => {
@@ -652,6 +685,8 @@ export default function DashboardPage() {
         </Button>
       </div>
 
+      <ServiceModesBanner modes={serviceModes} />
+
       {/* Tab Bar */}
       <div className="mb-8 flex gap-6 border-b border-outline-variant/20">
         {(
@@ -685,16 +720,15 @@ export default function DashboardPage() {
               label="Active Pipelines"
               value={counts.active}
               icon={Activity}
-              subtitle={`of ${Math.max(counts.active, 15)} total slots`}
-              progress={(counts.active / Math.max(counts.active, 15)) * 100}
-              trend={counts.active > 0 ? { value: 12, direction: "up" } : undefined}
+              subtitle={`of ${counts.all} total`}
+              progress={counts.all > 0 ? (counts.active / counts.all) * 100 : 0}
             />
             <MetricCard
               label="Throughput"
               value={`${throughput}`}
               unit="/day"
               icon={TrendingUp}
-              subtitle="of maximum capacity 30%"
+              subtitle="last 7 days"
             />
             <MetricCard
               label="Success Rate"
@@ -707,7 +741,7 @@ export default function DashboardPage() {
               value={avgTime}
               unit={avgTime !== "\u2014" ? "hrs" : undefined}
               icon={Clock}
-              subtitle="System Latency: Low"
+              subtitle={`${counts.completed} completed`}
             />
           </div>
 
@@ -716,6 +750,20 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-on-surface">All Running Pipelines</h2>
               <div className="flex items-center gap-4">
+                <button
+                  className="text-xs text-primary hover:text-primary-dim"
+                  onClick={() => {
+                    cleanupDeploys().then((res) => {
+                      if (res.cleaned?.length) {
+                        alert(`Cleaned ${res.cleaned.length} workspace(s): ${res.cleaned.join(", ")}`);
+                      } else {
+                        alert("No workspaces to clean up.");
+                      }
+                    }).catch(() => alert("Cleanup failed"));
+                  }}
+                >
+                  Clean Up Workspaces
+                </button>
                 <button className="text-xs text-primary hover:text-primary-dim">Export Logs</button>
                 <button className="text-xs text-primary hover:text-primary-dim">Filters</button>
               </div>

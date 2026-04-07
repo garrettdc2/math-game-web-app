@@ -6,33 +6,8 @@
       "Edit",
       "Bash",
       "Glob",
-      "Grep",
-      "mcp__github__*",
-      "mcp__netlify__*",
-      "mcp__supabase__*"
+      "Grep"
     ]
   },
-  "mcpServers": {
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
-    },
-    "netlify": {
-      "command": "npx",
-      "args": ["-y", "@netlify/mcp"],
-      "env": {
-        "NETLIFY_AUTH_TOKEN": "${NETLIFY_TOKEN}"
-      }
-    },
-    "supabase": {
-      "command": "npx",
-      "args": ["-y", "@supabase/mcp-server-supabase"],
-      "env": {
-        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_TOKEN}"
-      }
-    }
-  }
+  "mcpServers": {}
 }

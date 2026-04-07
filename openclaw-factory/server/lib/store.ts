@@ -31,10 +31,20 @@ export function initDb() {
       started_at REAL NOT NULL DEFAULT 0,
       has_pending_gate INTEGER NOT NULL DEFAULT 0,
       openclaw_session_key TEXT NOT NULL DEFAULT '',
+      deploy_url TEXT NOT NULL DEFAULT '',
+      deploy_mode TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )
   `);
+
+  // Add deploy columns if missing (migration for existing DBs)
+  try {
+    sqlite.exec(`ALTER TABLE pipelines ADD COLUMN deploy_url TEXT NOT NULL DEFAULT ''`);
+  } catch { /* column already exists */ }
+  try {
+    sqlite.exec(`ALTER TABLE pipelines ADD COLUMN deploy_mode TEXT NOT NULL DEFAULT ''`);
+  } catch { /* column already exists */ }
 
   // Initialize events table for event persistence
   initEventsTable();
@@ -61,6 +71,8 @@ export function savePipeline(state: PipelineState): void {
         started_at: state.started_at,
         has_pending_gate: state.has_pending_gate,
         openclaw_session_key: state.openclaw_session_key,
+        deploy_url: state.deploy_url,
+        deploy_mode: state.deploy_mode,
         updated_at: now,
       })
       .where(eq(pipelines.task_id, state.task_id))
@@ -79,6 +91,8 @@ export function savePipeline(state: PipelineState): void {
         started_at: state.started_at,
         has_pending_gate: state.has_pending_gate,
         openclaw_session_key: state.openclaw_session_key,
+        deploy_url: state.deploy_url,
+        deploy_mode: state.deploy_mode,
         created_at: now,
         updated_at: now,
       })
@@ -100,6 +114,8 @@ export function loadAllPipelines(): PipelineState[] {
     started_at: r.started_at,
     has_pending_gate: r.has_pending_gate,
     openclaw_session_key: r.openclaw_session_key,
+    deploy_url: r.deploy_url,
+    deploy_mode: r.deploy_mode,
   }));
 }
 

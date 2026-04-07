@@ -20,9 +20,18 @@ export interface PipelineDict {
   started_at: number;
   has_pending_gate: boolean;
   openclaw_session_key: string;
+  deploy_url: string;
+  deploy_mode: string;
   elapsed: number;
   elapsed_display: string;
   stage_index: number;
+  deploy_health: string | null;
+}
+
+export interface ServiceModes {
+  git: "local" | "cloud";
+  deploy: "local" | "cloud";
+  database: "local" | "cloud";
 }
 
 export interface PendingGate {
@@ -132,4 +141,31 @@ export function getEventHistory(after: number = 0, limit: number = 50) {
 
 export function getGatewayStatus() {
   return request<{ status: string; url: string; attemptCount: number; lastError?: string }>("/gateway/status");
+}
+
+export interface DeployHealthEntry {
+  task_id: string;
+  port: number;
+  url: string;
+  health: string;
+  last_checked: number;
+}
+
+export function getDeployHealth() {
+  return request<{ deploys: DeployHealthEntry[] }>("/deploys/health");
+}
+
+export function stopDeploy(taskId: string) {
+  return request<{ ok?: boolean; error?: string }>(`/deploys/${taskId}/stop`, { method: "POST" });
+}
+
+export function cleanupDeploys(taskIds?: string[]) {
+  return request<{ ok?: boolean; cleaned: string[]; skipped: string[] }>("/deploys/cleanup", {
+    method: "POST",
+    body: taskIds ? JSON.stringify({ task_ids: taskIds }) : "{}",
+  });
+}
+
+export function getServiceModes() {
+  return request<ServiceModes>("/service-modes");
 }

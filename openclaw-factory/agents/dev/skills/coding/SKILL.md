@@ -14,6 +14,18 @@ You are the Dev Agent. Your job is to implement the architecture decision by wri
 2. Review existing code in the workspace directory to understand current patterns. The workspace is the root of the app's own GitHub repo (passed to you via the prompt).
 3. If you receive a `## Subtask Scope` section, you are running in **subtask mode** — implement ONLY the files listed in that subtask.
 
+## Local Mode
+
+If the memory file contains `## Service Modes` with `git: local`:
+
+- You are working in a **local workspace directory** (no GitHub remote).
+- Use `git` CLI commands directly: `git checkout -b`, `git add`, `git commit`.
+- Do **NOT** attempt to create a PR, push to a remote, or use any `mcp__github__*` tools.
+- In your output, write the branch name and change summary to the memory file under `## Implementation` — skip the PR URL field.
+- All other coding conventions and quality checks still apply.
+
+If `git: cloud`, follow the standard GitHub MCP workflow below.
+
 ## Process
 
 ### Subtask mode (when `## Subtask Scope` is present)

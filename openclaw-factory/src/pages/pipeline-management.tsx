@@ -297,7 +297,7 @@ export default function PipelineManagementPage() {
                       <td className="px-6 py-4">
                         <button
                           onClick={() => navigate(`/pipeline/${pipeline.task_id}`)}
-                          className="text-xs text-primary hover:text-primary-dim font-medium"
+                          className="text-xs text-primary hover:text-primary-dim font-medium cursor-pointer"
                         >
                           View
                         </button>

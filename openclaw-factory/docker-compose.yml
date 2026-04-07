@@ -1,16 +1,20 @@
 services:
   openclaw:
     image: ghcr.io/openclaw/openclaw:2026.4.2
-    entrypoint: ["/bin/sh", "-c", "cp /seed-config/openclaw.json /root/.openclaw/openclaw.json 2>/dev/null; echo '{\"version\":1,\"defaults\":{\"security\":\"full\",\"ask\":\"off\",\"askFallback\":\"full\"}}' > /root/.openclaw/exec-approvals.json 2>/dev/null; exec openclaw gateway --bind lan --allow-unconfigured"]
+    entrypoint: ["/bin/sh", "-c", "cp /seed-config/openclaw.json /root/.openclaw/openclaw.json 2>/dev/null; echo '{\"version\":1,\"defaults\":{\"security\":\"full\",\"ask\":\"off\",\"askFallback\":\"full\"}}' > /root/.openclaw/exec-approvals.json 2>/dev/null; sh /root/scripts/deploy-supervisor.sh & exec openclaw gateway --bind lan --allow-unconfigured"]
     user: root
     ports:
       - "18789:18789"
+      - "127.0.0.1:3001-3010:3001-3010"  # Local demo mode: serve built apps (localhost only)
+      - "4173:4173"                        # Vite preview default port
     volumes:
       - openclaw-data:/root/.openclaw
       - ./openclaw-config.json:/seed-config/openclaw.json:ro
       - ./agents:/root/agents
       - ./hooks:/root/.openclaw/hooks
       - ./memory:/root/memory
+      - ./deploys:/root/deploys
+      - ./scripts/deploy-supervisor.sh:/root/scripts/deploy-supervisor.sh:ro
     env_file:
       - ../.env
     environment:

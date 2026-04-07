@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "generate-settings": "tsx scripts/generate-agent-settings.ts",
+    "predev": "npm run generate-settings",
     "dev:server": "PORT=8001 tsx watch server/index.ts",
     "dev:client": "vite",
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "docker:up": "docker compose up -d openclaw",
+    "docker:down": "docker compose down",
+    "start:dev": "npm run docker:up && npm run dev",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "node dist/server/index.js",
     "db:generate": "drizzle-kit generate"

@@ -14,6 +14,8 @@ export const pipelines = sqliteTable("pipelines", {
     .notNull()
     .default(false),
   openclaw_session_key: text("openclaw_session_key").notNull().default(""),
+  deploy_url: text("deploy_url").notNull().default(""),
+  deploy_mode: text("deploy_mode").notNull().default(""),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
 });
@@ -66,6 +68,8 @@ export interface PipelineState {
   started_at: number;
   has_pending_gate: boolean;
   openclaw_session_key: string;
+  deploy_url: string;
+  deploy_mode: string;
 }
 
 export function stageIndex(stage: string): number {

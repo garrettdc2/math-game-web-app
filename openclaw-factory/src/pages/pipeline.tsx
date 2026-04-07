@@ -8,6 +8,7 @@ import { StageStepper } from "@/components/stage-stepper";
 import { GatePanel } from "@/components/gate-panel";
 import { ErrorPanel } from "@/components/error-panel";
 import { MemoryViewer } from "@/components/memory-viewer";
+import { DeployStatus } from "@/components/deploy-status";
 import { getPipelineStatus, getPipelineLogs, type PipelineDict } from "@/lib/api";
 import { useSSEEvent } from "@/hooks/use-sse";
 
@@ -186,6 +187,22 @@ export default function PipelinePage() {
               gateName={`gate_${pipeline.stage}_review`}
               onResolved={fetchData}
             />
+          )}
+
+          {/* Deploy Status */}
+          {(pipeline.deploy_url || pipeline.deploy_mode) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Deployment</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DeployStatus
+                  deployUrl={pipeline.deploy_url}
+                  deployMode={pipeline.deploy_mode}
+                  deployHealth={pipeline.deploy_health}
+                />
+              </CardContent>
+            </Card>
           )}
 
           {/* Pipeline Metadata */}

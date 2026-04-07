@@ -8,6 +8,7 @@ RUN npm run build
 
 # Stage 2: Production image
 FROM node:20-slim AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
